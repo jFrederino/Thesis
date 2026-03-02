@@ -1,0 +1,12 @@
+JAMES USHER
+1 FEB 2026
+
+with a minimum gap size of 48, this limits the overall resolution of measurement possible quite a bit.
+the average increment of around 50 per change in wavelength in the original implies to me that incrementing a DAC value by 1 wont do much at all. 
+also, i assume a change in value of 1 will have different effects on all four DAC controllers. 
+if we want the overall resolution to be consistant, then the spacing in the largest gaps needs to be limited by the smallest gaps, 
+so wavelength target values will be found by dividing the available space by 48 (or something like that).
+
+the average gap size is closer to 400, though, with uit seemingly hovering around 200 and bounding up and down, 
+so maybe the average resolution could be finer, with some gaps? seems hacky.
+

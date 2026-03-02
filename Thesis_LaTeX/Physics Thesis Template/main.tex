@@ -1,0 +1,106 @@
+\documentclass[12pt,oneside,reqno]{amsbook}
+\usepackage{float}
+\usepackage{apacite}
+\usepackage{hyperref}
+\usepackage{epsfig}
+\usepackage{natbib}
+\usepackage{deluxetable}
+\usepackage{graphicx}
+\usepackage{silence}
+\usepackage{setspace}
+\usepackage{nicefrac}
+\usepackage{aas_macros}
+\usepackage{aasmod}
+\usepackage{multirow}
+\usepackage{caption}
+\usepackage{booktabs}
+\usepackage{rotating}
+\usepackage{lscape}
+\usepackage{subcaption}
+\usepackage{physics}
+\usepackage{siunitx}
+\usepackage[section]{placeins}
+\usepackage [english]{babel} 
+\usepackage [autostyle, english = american]{csquotes}
+\MakeOuterQuote{"}
+%\usepackage{float} this might break things
+%this sets the margins to 1" on all sides -- the amsbook gives giant margins.
+\addtolength{\oddsidemargin}{-.875in}
+\addtolength{\evensidemargin}{-.875in}
+\addtolength{\textwidth}{1.75in}
+\addtolength{\topmargin}{-.55 in}
+\addtolength{\textheight}{1.2 in}
+
+% this changes the line spacing
+\linespread{2}
+
+% add commands here
+\newcommand{\kms}{km~s$^{-1}$}
+\newcommand{\nii}{[\textrm{N}~\textsc{ii}]}
+\newcommand{\oiii}{[\textrm{O}~\textsc{iii}]}
+\newcommand{\sii}{[\textrm{S}~\textsc{ii}]}
+\newcommand{\oi}{[\textrm{O}~\textsc{i}]}
+\newcommand{\oii}{[\textrm{O}~\textsc{ii}]}
+\newcommand{\sfrd}{$\Sigma_{\textrm{SFR}}$ }
+
+\WarningFilter{latex}{Text page}
+%\numberwithin{equation}{chapter} % This numbers the equations within each chapter as 1.1, 1.2, 2.1, etc.
+\numberwithin{figure}{chapter} % This does the same for the figures.
+\theoremstyle{plain} % This is the default style.
+
+\theoremstyle{definition}
+\newtheorem*{dfn}{Definition}
+% The asterisk suppresses the numbering of definitions.
+
+\theoremstyle{remark}
+\newtheorem{ex}{Example}
+\newtheorem*{rem}{Remark}
+% The asterisk suppresses the numbering of remarks.
+
+
+\graphicspath{{converted_graphics/}}
+\begin{document}
+\frontmatter % Pages here will be numbered with Roman numerals.
+\title[]{Title}
+
+
+%Calculating Star Formation Rates in High-Redshift Compact Starburst Galaxies}
+
+\author{Your Name}
+\address{Department of Physics and Astronomy\\Bates College\\Lewiston, ME 04240}
+\maketitle
+
+% Create real cover page.
+\newpage
+\thispagestyle{empty} 			% Suppress numbering of this page.
+\include{preface/cover}       			% Save the file cover.tex to the same folder as 
+\setcounter{page}{1}
+\tableofcontents
+
+% \list of tables
+\cleardoublepage
+\phantomsection
+\listoffigures % Use the above if you have tables/figures and want them listed in the front.
+
+% The following files should be in the same folder as thesis.tex.
+\include{preface/acknowledgements}     			% Acknowledgments
+\mainmatter % Pages here will be numbered 1, 2, 3, and so on .
+\numberwithin{section}{chapter}
+
+
+\include{preface/abstract}
+\input{introduction/intro}
+\input{apparatus/apparatus}
+% \input{methods/methods}
+\input{results/results1}
+% \input{conclusion/disucssion}
+\input{conclusion/conclusion}
+
+\backmatter
+% \include{appendix}% Use \include{appendixB} to include another appendix.
+\setcitestyle{numbers}
+\bibliographystyle{aip}
+\bibliography{bib.bib}
+% \input{Appendix A/AppendixA}
+
+\end{document}
