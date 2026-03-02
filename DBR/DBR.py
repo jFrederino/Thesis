@@ -186,6 +186,7 @@ def laser_auto_scan(
         INTERPOLATION_TYPE = "linear", 
         INTERPOLATION_VALUE = 3, 
         PLOT_CHOICE = False, 
+        PLOT_BOTH = False,
         delay = 0.1, 
         SENDING_PACKETS: bool = True, 
         SANATIZE: bool = True):
