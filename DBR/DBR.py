@@ -8,8 +8,6 @@ from tqdm import tqdm
 import generate_table as table 
 import helper_functions as helper
 
-
-
 '''
 #Procedure to turn on laser:
 
@@ -62,7 +60,7 @@ def laser_manual_scan():
     SANATIZE = helper.get_user_input(message="Sanatize Packets Y/N: ", input_type="y/n")
     
     PLOT_CHOICE = helper.get_user_input(message="Plot DAC values Y/N: ", input_type="y/n")
-
+    PLOT_BOTH = helper.get_user_input(message="Plot Original values also Y/N: ", input_type="y/n")
     #look for existing table first
     if INTERPOLATION_TYPE == "linear": table_list = glob.glob(f'**/DAC_Tables/INTERP_{INTERPOLATION_VALUE, START_INDEX, END_INDEX}.csv', recursive=True)
     if INTERPOLATION_TYPE == "curve_fit": table_list = glob.glob(f'**/DAC_Tables/EXTRAP_{INTERPOLATION_VALUE, START_INDEX, END_INDEX}.csv', recursive=True)
@@ -75,7 +73,8 @@ def laser_manual_scan():
                                         interpolate_val=INTERPOLATION_VALUE, 
                                         start_index=START_INDEX,
                                         end_index=END_INDEX, 
-                                        plot=PLOT_CHOICE)
+                                        plot=PLOT_CHOICE,
+                                        plot_both=PLOT_BOTH)
         
     DAC_list = table.get_DAC_arrays_from_table(path, False)     
 
@@ -216,48 +215,22 @@ def laser_auto_scan(
         print(f"Table already exists! Fetching data from: {path}")
 
     if not table_list or PLOT_CHOICE:
-        path = table.generate_DAC_table(interpolate_type=INTERPOLATION_TYPE, interpolate_val=INTERPOLATION_VALUE, start_index=START_INDEX, end_index=END_INDEX, plot=PLOT_CHOICE)
+        path = table.generate_DAC_table(interpolate_type=INTERPOLATION_TYPE, interpolate_val=INTERPOLATION_VALUE, start_index=START_INDEX, end_index=END_INDEX, plot=PLOT_CHOICE, plot_both=PLOT_BOTH)
 
     DAC_list = table.get_DAC_arrays_from_table(path) 
 
     packets = []
+    
     for i in range(len(DAC_list[0])):
         fm_val = DAC_list[1][i]
         bm_val = DAC_list[2][i]
         ph_val = DAC_list[3][i]
         soa_val = DAC_list[4][i]
 
+#%%     SANATIZE PACKETS HERE
         if SANATIZE:
-
-            '''
-            -- from the manual -- 
-            DAC GUI
-
-            The DAC GUI can be accessed from the FP42xx GUI Utility
-            menu. This GUI allows the user to control the individual
-            laser section drive strength as well as adjust the laser
-            operating temperature.
-            Temperature Control
-
-            The Temperature control portion of the GUI allows the
-            user to set and read laser temperature as well as read TEC
-            Voltage in 16-bit DAC counts with a midscale 32767. The
-            Set Temp button allows the user to set a temperature in
-            centi-Celsius or deg C*100. (i.e. 4000 deg cC = 40 deg C).
-            Read Temp button reads the current operating
-            temperature back from the module in centi-Celsius.
         
-            "The Laser Drive Portion of the GUI allows the user to
-            drive each laser section manually. Full scale on each
-            current source is 65535." 
 
-            I take this to mean that the DAC current/voltage control values are allowed to be anywhere in that range:
-            0 to 65535. That would mean that extending the edges like this is perfectly fine. 
-            this is the maxmimum unsigned 16 bit int, which makes sense
-
-            '''
-
-            #SANATIZE PACKETS HERE
             values = [fm_val, bm_val, ph_val, soa_val]
             names = ["FM", "BM", "PH", "SOA"]
             maximums = [57954, 43418, 17448, 45527]
@@ -268,7 +241,7 @@ def laser_auto_scan(
                 if val > maximums[j]: raise Exception(f"{names[j]} DAC value outside of acceptable range: {val} > {maximums[j]}" )
                 if val < minimums[j]: raise Exception(f"{names[j]} DAC value outside of acceptable range: {val} < {minimums[j]}" )
 
-        # END OF SANATIZE 
+        #   END OF SANATIZE 
        
         fm_hex = helper.val_to_split_hex(fm_val)
         bm_hex = helper.val_to_split_hex(bm_val)
@@ -284,7 +257,6 @@ def laser_auto_scan(
         packets.append([fm_packet, bm_packet, ph_packet, soa_packet, target_wl])
 
     num_packets = len(DAC_list[0])
-
     print(f"Preparing: {num_packets} Packets")
 
     for i in tqdm(range(num_packets)):

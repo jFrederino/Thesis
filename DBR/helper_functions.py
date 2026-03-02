@@ -37,11 +37,16 @@ def get_user_input(message:str, input_type:str):
     
         if user_input_type == input_type:
             return user_input
+        
+    if input_type == "float" and user_input_type == "int": #allows for integer inputs as floats (less strict float inputs)
+        user_input_type = "float"
 
     if user_input_type == input_type:
+
         if input_type == "int":
             print(f"returning {int(user_input)}")
             return int(user_input)
+        
         if input_type == "float": 
             print(f"returning {float(user_input)}")
             return float(user_input)
