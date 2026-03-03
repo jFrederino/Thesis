@@ -31,7 +31,7 @@ close GUI
 profit
 '''
 def laser_manual_scan():
-
+    
     CWD = os.path.dirname(os.path.realpath(__file__))
     SENDING_PACKETS = helper.get_user_input(message="Send Packets to Laser Y/N: ", input_type="y/n")
 
@@ -88,8 +88,7 @@ def laser_manual_scan():
 
         if SANATIZE:
             #SANATIZE PACKETS HERE
-           
-
+    
             values = [fm_val, bm_val, ph_val, soa_val, wl_val]
             names = ["FM", "BM", "PH", "SOA", "WL"]
             maximums = [57954, 43418, 17448, 45527, 1672.4955]
@@ -182,7 +181,7 @@ def laser_manual_scan():
 
 def laser_auto_scan(
         START_INDEX = 0, 
-        END_INDEX = 10000, 
+        END_INDEX = 9999, 
         INTERPOLATION_TYPE = "linear", 
         INTERPOLATION_VALUE = 3, 
         PLOT_CHOICE = False, 
@@ -190,7 +189,24 @@ def laser_auto_scan(
         delay = 0.1, 
         SENDING_PACKETS: bool = True, 
         SANATIZE: bool = True):
+    
+    '''
+    Automatically scans through and transmits serial packets from preset range of extrapolated DAC values.
 
+    Parameters
+    ----------
+
+    START_INDEX (int) = 0 : Start index of DAC table (within original 10,000 value LUT).
+    END_INDEX (int) = 0 : End index of DAC table.
+    INTERPOLATION_TYPE (str) = "linear" : either "linear" or "curve_fit" method of DAC value interpolation/extrapolation.
+    INTERPOLATION_VALUE (int) = 3 : Number of new DAC values generated between existing points in LUT
+    PLOT_CHOICE (bool) = False : Decides whether to plot with matplotlib or not.
+    PLOT_BOTH (bool) = False : Decides whether or not to plot original LUT values under newly generated values.
+    delay (float) = 0.1 : Delay in seconds between packets sent via serial port. 
+    SANATIZE (bool) = True : Decides whether to check DAC table values for outliers outside of accepted range.
+
+    
+    '''
     CWD = os.path.dirname(os.path.realpath(__file__))
 
     if SENDING_PACKETS:

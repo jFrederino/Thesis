@@ -1,7 +1,6 @@
 # JAMES USHER 2026
 
+import DBR as dbr
 
-import DBR
-
-DBR.laser_manual_scan()
-#DBR.laser_auto_scan()
+dbr.laser_manual_scan()
+#dbr.laser_auto_scan()

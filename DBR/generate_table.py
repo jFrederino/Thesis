@@ -2,6 +2,7 @@
 import csv
 import numpy as np
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 import scienceplots
 import glob 
 import os 
@@ -124,7 +125,7 @@ def generate_DAC_table(interpolate_type: str = "linear", interpolate_val:int = 0
         #https://stackoverflow.com/a/64929683
         #https://stackoverflow.com/a/48507056
         #https://www.eg.bucknell.edu/~phys310/jupyter/linear_fit_example_2.html
-        
+
         '''
         -- from the manual -- 
         DAC GUI
@@ -275,7 +276,45 @@ def generate_DAC_table(interpolate_type: str = "linear", interpolate_val:int = 0
     print('Generated Table:' + new_table_path)
     return new_table_path
     
+def visualize_parameters():
+    DAC_arrays = get_DAC_arrays_from_table(DAC_TABLE_PATH, True, 0, 9999) #this is what narrows down what we are interpolating between
+
+    #if not interpolate_val: return DAC_TABLE_PATH
+    idx,fm,bm,ph,soa,wl = DAC_arrays[0],DAC_arrays[1],DAC_arrays[2],DAC_arrays[3],DAC_arrays[4],DAC_arrays[5]
+
+    fig = plt.figure()
+    ax = fig.add_subplot(projection='3d')
+    names = ["FM", "BM", "PH", "SOA"]
+
+    exclude = "SOA"
+
+    if exclude == "SOA":
+        sizes = (np.array(soa) * np.array(soa)) / 15000000
+        sc = ax.scatter(fm, bm, ph, c = wl, s = sizes, cmap='viridis', marker='o')
+        ax.set_xlabel('FM')
+        ax.set_ylabel('BM')
+        ax.set_zlabel('PH')
+    
+        fig.colorbar(sc, ax = ax, pad = 0.1, label='Wavelength')
+        plt.title(f'5D LUT Visualization for FM, BM, PH, with size dependent on SOA')
+        plt.savefig(CWD+f'/Plots/VIS_(FM,BM,PH,SOA).pdf', format='pdf')
+
+        plt.show()
+    if exclude == "PH":
+        sizes = (np.array(ph) * np.array(ph)) / 15000000
+        sc = ax.scatter(fm, bm, soa, c = wl, s=sizes, cmap='viridis', marker='o')
+        ax.set_xlabel('FM')
+        ax.set_ylabel('BM')
+        ax.set_zlabel('SOA')
+        
+        fig.colorbar(sc, ax = ax, pad = 0.1, label='Wavelength')
+        plt.title(f'5D LUT Visualization for FM, BM, SOA, with size dependent on PH')
+        plt.savefig(CWD+f'/Plots/VIS_(FM,BM,SOA,PH).pdf', format='pdf')
+
+        plt.show()
+    pass
 #generate_DAC_table(interpolate_val=3, start_index=400, end_index=450)
 
 #generate_DAC_table(interpolate_type = "linear", interpolate_val = 0, start_index=5000, end_index=6000, plot=True)
 
+visualize_parameters()
