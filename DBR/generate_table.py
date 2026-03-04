@@ -50,6 +50,7 @@ class DAC_Table:
                 PH.append(int(row[3]))
                 SOA.append(int(row[4]))
                 WL.append(float(row[5]))
+                
         if apply_bounds:
             idx = IDX[start_index:end_index]
             fm = FM[start_index:end_index]
@@ -177,6 +178,12 @@ class DAC_Table:
         for val in new_bm: r_bm.append(round(val))
         for val in new_ph: r_ph.append(round(val))
         for val in new_soa: r_soa.append(round(val))
+
+        self.r_fm = r_fm
+        self.r_bm = r_bm
+        self.r_ph = r_ph
+        self.r_soa = r_soa
+        self.new_wl = new_wl
 
         return self._write_DAC_table()
 

@@ -5,6 +5,7 @@ import serial.tools.list_ports
 from timeit import default_timer as timer
 from tqdm import tqdm
 import pyvisa
+import csv 
 
 #import DBR.generate_table_old as table 
 import generate_table as table
@@ -64,7 +65,7 @@ class DBR_Spectrometer:
             self.sending_packets = sending_packets
             self.sanatize = sanatize
             self.log_voltage = log_voltage
-
+            self._voltage_data = []
     def _get_interpolation_type(self, start_message):
             self.interpolation_type = helper.get_user_input(message = start_message, input_type="str")
             if self.interpolation_type not in ["linear", "curve_fit"]:
@@ -84,7 +85,63 @@ class DBR_Spectrometer:
             timeout = 1) 
         
         print(f"Serial port {self._laser_serial.name} opened successfully.")
-    
+
+    def _write_voltage(self):
+        CWD = os.path.dirname(os.path.realpath(__file__))
+        if self.interpolate_type == "linear":
+            new_table_path = CWD+f'/Voltage_Data/INTERP_({self.interpolation_value}, {self.start_index}, {self.end_index}).csv'
+
+        if self.interpolate_type == "curve_fit":
+            new_table_path = CWD+f'/Voltage_Data/EXTRAP_({self.interpolation_value}, {self.start_index}, {self.end_index}).csv'
+
+        with open(new_table_path, 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile, delimiter=',', quotechar='|')
+            writer.writerow(['IDX','Voltage'])
+            for row in range(0, len(self._voltage_data)):
+                writer.writerow([row, self._voltage_data[row]])
+
+    def _read_response(self):
+                response = self._laser_serial.read(4)
+                tqdm.write(f"Full Response: {response}")
+
+                reg = response[0]
+                value_msb = response[1]
+                value_lsb = response[2]
+                status = response[3]
+
+                match reg:
+                    case 0x13: name = "FM"
+                    case 0x12: name = "BM"
+                    case 0x11: name = "PH"
+                    case 0x14: name = "SOA"
+                
+                if status == 0x01:
+                    gain_value = (value_msb << 8) | value_lsb
+                    print(f"{name} Current DAC = {gain_value}")
+                    if self.log_voltage: 
+                        self._voltage_data.append(self._read_voltage())
+
+
+                else:
+                    print(f"Error: status code 0x{status:X}")
+
+                if response != b'': 
+                    reg = response[0]
+                    value_msb = response[1]
+                    value_lsb = response[2]
+
+                    status = response[3] 
+                    if status == 0x01: 
+                        tqdm.write(f"Status: {status} = all good \n")
+                        
+                    else:
+                        print(f"Error: status code 0x{status:X}")
+                        self._laser_serial.close()
+                        sys.exit()
+                else: 
+                    print("Response Empty")
+
+
     def _send_packets(self, DAC_list: list[list], manual: bool = True):
         '''
         Sends Packets to Instatune Laser Module.
@@ -99,24 +156,23 @@ class DBR_Spectrometer:
 
             #   SANATIZE PACKETS HERE
             if self.sanatize:
-                #as far as i am aware, the DAC values can be anywhere between 0 and 65535 according to the manual (the unsigned 16-bit integer limit) and it will work fine
+                #as far as i am aware, the DAC values can be anywhere between 0 and 65535 according to the manual (the unsigned 16-bit integer limit) 
                 values = [fm_val, bm_val, ph_val, soa_val]
                 names = ["FM", "BM", "PH", "SOA"]
                 maximums = [57954, 43418, 17448, 45527] #max from LUT 0v0
-                minimums = [668, 982, 2496, 14319] #min from LUT 0v0 - values beyond these work! 
+                minimums = [668, 982, 2496, 14319] #min from LUT 0v0
             
                 for val in values:
                     j = values.index(val) 
                     if val > maximums[j]: raise Exception(f"{names[j]} DAC value outside of acceptable range: {val} > {maximums[j]}" )
                     if val < minimums[j]: raise Exception(f"{names[j]} DAC value outside of acceptable range: {val} < {minimums[j]}" )
-
-            #   END OF SANATIZE 
         
             fm_hex = helper.val_to_split_hex(fm_val)
             bm_hex = helper.val_to_split_hex(bm_val)
             ph_hex = helper.val_to_split_hex(ph_val)
             soa_hex = helper.val_to_split_hex(soa_val)
  
+            #also should check hex values here
             fm_packet =  bytes([(0x13)|(1 << 7), fm_hex[0], fm_hex[1], 0x00 ])
             bm_packet =  bytes([(0x12)|(1 << 7), bm_hex[0], bm_hex[1], 0x00 ])
             ph_packet =  bytes([(0x11)|(1 << 7), ph_hex[0], ph_hex[1], 0x00 ])
@@ -155,37 +211,19 @@ class DBR_Spectrometer:
             
             tqdm.write(f"waiting {self.delay} second(s)...")
             time.sleep(self.delay)
-
+            simulate_response = self.sending_packets
             if self.sending_packets: 
-            # SEND
-                for j in range(4): self._laser_serial.write(packets[i][j])
-            # RESPONSE
-                start = timer()
-                response = self._laser_serial.read(4)
-                end = timer()
-                tqdm.write(f"Response Delay: {end - start}s")
+                for j in range(4): 
+                    self._laser_serial.write(packets[i][0])
+                    self._read_response()
+                    self._laser_serial.write(packets[i][1])
+                    self._read_response()
+                    self._laser_serial.write(packets[i][2])
+                    self._read_response()
+                    self._laser_serial.write(packets[i][3])
+                    self._read_response()
 
-            #   simulate good response
-            else: response = bytes([ 0x00, 0x00, 0x00, 0x01 ])
-            tqdm.write(f"Full Response: {response}")
-
-            #   these are not implemented in the documentation for the Instatune
-            if response != b'': 
-                reg = response[0]
-                value_msb = response[1]
-                value_lsb = response[2]
-
-                status = response[3] 
-                if status == 0x01: 
-                    tqdm.write(f"Status: {status} = all good \n")
-                    if self.log_voltage: self.get_voltage()
-                else:
-                    print(f"Error: status code 0x{status:X}")
-                    self._laser_serial.close()
-                    sys.exit()
-            else: 
-                print("Response Empty")
-
+            
     def _manual_setup(self):
         '''
         Allows for configuration of DBR Spectrometer Settings via command line.
@@ -209,7 +247,7 @@ class DBR_Spectrometer:
         self.plot_choice = helper.get_user_input(message="Plot DAC values Y/N: ", input_type="y/n")
         self.plot_both = helper.get_user_input(message="Plot Original values also Y/N: ", input_type="y/n")
 
-    def get_voltage(self):
+    def _read_voltage(self) -> list:
         '''
         Measures voltage via connected Voltmeter
         '''
@@ -219,6 +257,8 @@ class DBR_Spectrometer:
         print(self._voltmeter_inst.query("*IDN?"))
         print(self._voltmeter_inst.query("MEAS:VOLT:DC? 0.100,0.001"))
 
+        return [self._voltmeter_inst.query("*IDN?"), self._voltmeter_inst.query("MEAS:VOLT:DC? 0.100,0.001")]
+    
     def scan(self, mode="manual"):
         '''
         DBR Spectrometer scans through wavelengths generated via DAC values. Tables can be generated with interpolated or extrapolated values. Manual Setup via command line allows for sending individual packets one at a time. 

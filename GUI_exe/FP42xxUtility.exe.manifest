@@ -1,0 +1,111 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<asmv1:assembly xsi:schemaLocation="urn:schemas-microsoft-com:asm.v1 assembly.adaptive.xsd" manifestVersion="1.0" xmlns:asmv1="urn:schemas-microsoft-com:asm.v1" xmlns="urn:schemas-microsoft-com:asm.v2" xmlns:asmv2="urn:schemas-microsoft-com:asm.v2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:co.v1="urn:schemas-microsoft-com:clickonce.v1" xmlns:asmv3="urn:schemas-microsoft-com:asm.v3" xmlns:dsig="http://www.w3.org/2000/09/xmldsig#" xmlns:co.v2="urn:schemas-microsoft-com:clickonce.v2">
+  <asmv1:assemblyIdentity name="FP42xxUtility.exe" version="1.0.0.5" publicKeyToken="933912bebcb20631" language="neutral" processorArchitecture="msil" type="win32" />
+  <description asmv2:iconFile="fplogo2.ico" xmlns="urn:schemas-microsoft-com:asm.v1" />
+  <application />
+  <entryPoint>
+    <assemblyIdentity name="FP42xxUtility" version="1.0.0.0" language="neutral" processorArchitecture="msil" />
+    <commandLine file="FP42xxUtility.exe" parameters="" />
+  </entryPoint>
+  <trustInfo>
+    <security>
+      <applicationRequestMinimum>
+        <PermissionSet Unrestricted="true" ID="Custom" SameSite="site" />
+        <defaultAssemblyRequest permissionSetReference="Custom" />
+      </applicationRequestMinimum>
+      <requestedPrivileges xmlns="urn:schemas-microsoft-com:asm.v3">
+        <!--
+          UAC Manifest Options
+          If you want to change the Windows User Account Control level replace the 
+          requestedExecutionLevel node with one of the following.
+
+        <requestedExecutionLevel  level="asInvoker" uiAccess="false" />
+        <requestedExecutionLevel  level="requireAdministrator" uiAccess="false" />
+        <requestedExecutionLevel  level="highestAvailable" uiAccess="false" />
+
+         If you want to utilize File and Registry Virtualization for backward 
+         compatibility then delete the requestedExecutionLevel node.
+    -->
+        <requestedExecutionLevel level="asInvoker" uiAccess="false" />
+      </requestedPrivileges>
+    </security>
+  </trustInfo>
+  <dependency>
+    <dependentOS>
+      <osVersionInfo>
+        <os majorVersion="5" minorVersion="1" buildNumber="2600" servicePackMajor="0" />
+      </osVersionInfo>
+    </dependentOS>
+  </dependency>
+  <dependency>
+    <dependentAssembly dependencyType="preRequisite" allowDelayedBinding="true">
+      <assemblyIdentity name="Microsoft.Windows.CommonLanguageRuntime" version="4.0.30319.0" />
+    </dependentAssembly>
+  </dependency>
+  <dependency>
+    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="FP42xxUtility.exe" size="764336">
+      <assemblyIdentity name="FP42xxUtility" version="1.0.0.0" language="neutral" processorArchitecture="msil" />
+      <hash>
+        <dsig:Transforms>
+          <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
+        </dsig:Transforms>
+        <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
+        <dsig:DigestValue>ATKaX0IMQErE861mstY70tK0ljI7BRiThgWCNkzZG/k=</dsig:DigestValue>
+      </hash>
+    </dependentAssembly>
+  </dependency>
+  <file name="FP42xxUtility.exe.config" size="187">
+    <hash>
+      <dsig:Transforms>
+        <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
+      </dsig:Transforms>
+      <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
+      <dsig:DigestValue>xm4bo26HQ0LNVwz1vdPYtzhkpMnp2AI5i+f0b+OahTI=</dsig:DigestValue>
+    </hash>
+  </file>
+  <file name="fplogo.ico" size="178563">
+    <hash>
+      <dsig:Transforms>
+        <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
+      </dsig:Transforms>
+      <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
+      <dsig:DigestValue>wk95WLrRRT+EF/EpwVf5dvv5AHsblU/WIWu6++CQe6Q=</dsig:DigestValue>
+    </hash>
+  </file>
+  <file name="fplogo2.ico" size="178563">
+    <hash>
+      <dsig:Transforms>
+        <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
+      </dsig:Transforms>
+      <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
+      <dsig:DigestValue>wk95WLrRRT+EF/EpwVf5dvv5AHsblU/WIWu6++CQe6Q=</dsig:DigestValue>
+    </hash>
+  </file>
+  <file name="ftd2xx.h" size="27161">
+    <hash>
+      <dsig:Transforms>
+        <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
+      </dsig:Transforms>
+      <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
+      <dsig:DigestValue>kEMrj7EU7wrUUZWIFyxg2av6R35KaKveBaN+kFKmwzg=</dsig:DigestValue>
+    </hash>
+  </file>
+  <file name="libMPSSE.dll" size="61316">
+    <hash>
+      <dsig:Transforms>
+        <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
+      </dsig:Transforms>
+      <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
+      <dsig:DigestValue>erlTJQzMBHaUzlNY9XhZ1FcBHuOteVFVQ/FpKASnHgs=</dsig:DigestValue>
+    </hash>
+  </file>
+  <file name="libMPSSE_spi.h" size="6898">
+    <hash>
+      <dsig:Transforms>
+        <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
+      </dsig:Transforms>
+      <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
+      <dsig:DigestValue>qY2xKCwPLh+4pdvDWS+AE4vAY3ZU3jaTX+P9UEm7Bd0=</dsig:DigestValue>
+    </hash>
+  </file>
+<publisherIdentity name="CN=GAVIGAN\Devon" issuerKeyHash="d989144db4e175ae364ff47db94d66b6694d62f8" /><Signature Id="StrongNameSignature" xmlns="http://www.w3.org/2000/09/xmldsig#"><SignedInfo><CanonicalizationMethod Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#" /><SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha256" /><Reference URI=""><Transforms><Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature" /><Transform Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#" /></Transforms><DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" /><DigestValue>YEpFsA59u9GwNIjbGfu3XoCZTyt1QT0xWGhGiBFUTfY=</DigestValue></Reference></SignedInfo><SignatureValue>3vijWqqZAYin2pUyFj0Tx1cKR3zCJtm/rgwEQLgskRlfHx7FH+WIdlCunAT+0CLFdZJUVAJRY4O+Ve95EpzPZ7BOXyKAlPL5cA/hTVJkcCgPWq/A043P/Lanz/DGgmDOyBLJ/ZOHOBmwcGZMY4HT+cIoKRkncVTK7IfDL6/oBPQ=</SignatureValue><KeyInfo Id="StrongNameKeyInfo"><KeyValue><RSAKeyValue><Modulus>9TFMUcPVBRajrhbMJcZJNh9A21Tdpptck2twWtaiF43SvUJZro13kx1zWlao1ifD/n8Bp8R9dlQtq3V9S8hplSwr/kp2guv+xOJ0n91gZW9m6w3v+hNC+MF9GvasIBEM5Jzl6gLSE8HHTdUHlv5/B/vFJQZdQ91+/BnL6rrHX50=</Modulus><Exponent>AQAB</Exponent></RSAKeyValue></KeyValue><msrel:RelData xmlns:msrel="http://schemas.microsoft.com/windows/rel/2005/reldata"><r:license xmlns:r="urn:mpeg:mpeg21:2003:01-REL-R-NS" xmlns:as="http://schemas.microsoft.com/windows/pki/2005/Authenticode"><r:grant><as:ManifestInformation Hash="f64d541188466858313d41752b4f99805eb7fb19db8834b0d1bb7d0eb0454a60" Description="" Url=""><as:assemblyIdentity name="FP42xxUtility.exe" version="1.0.0.5" publicKeyToken="933912bebcb20631" language="neutral" processorArchitecture="msil" type="win32" /></as:ManifestInformation><as:SignedBy /><as:AuthenticodePublisher><as:X509SubjectName>CN=GAVIGAN\Devon</as:X509SubjectName></as:AuthenticodePublisher></r:grant><r:issuer><Signature Id="AuthenticodeSignature" xmlns="http://www.w3.org/2000/09/xmldsig#"><SignedInfo><CanonicalizationMethod Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#" /><SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha256" /><Reference URI=""><Transforms><Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature" /><Transform Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#" /></Transforms><DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" /><DigestValue>D2CvsC5chrnoVyRLv576M+O1qgrnbwFoS/SrM8zMyTc=</DigestValue></Reference></SignedInfo><SignatureValue>nj3vYlxcQdydqJxP+iQhooA9GTuOPLwhsSmt7ka+5q+TyINhClZFKV+0l7DtbTSo3qjvdP91I63bISvzF7xZi9CY4v8nHrv51CRY/0is635xIX6ckyEY6p7NguWp6d7PyOvEO8yyGvYa3UEBQsV9l1eabdtYnDILVyLkwwIajYU=</SignatureValue><KeyInfo><KeyValue><RSAKeyValue><Modulus>9TFMUcPVBRajrhbMJcZJNh9A21Tdpptck2twWtaiF43SvUJZro13kx1zWlao1ifD/n8Bp8R9dlQtq3V9S8hplSwr/kp2guv+xOJ0n91gZW9m6w3v+hNC+MF9GvasIBEM5Jzl6gLSE8HHTdUHlv5/B/vFJQZdQ91+/BnL6rrHX50=</Modulus><Exponent>AQAB</Exponent></RSAKeyValue></KeyValue><X509Data><X509Certificate>MIIBzTCCATagAwIBAgIQXXpEqokT+55GmYKmq44hqjANBgkqhkiG9w0BAQsFADAlMSMwIQYDVQQDHhoARwBBAFYASQBHAEEATgBcAEQAZQB2AG8AbjAeFw0yMzA1MTgyMDI0MjVaFw0yNDA1MTgwMjI0MjVaMCUxIzAhBgNVBAMeGgBHAEEAVgBJAEcAQQBOAFwARABlAHYAbwBuMIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQD1MUxRw9UFFqOuFswlxkk2H0DbVN2mm1yTa3Ba1qIXjdK9QlmujXeTHXNaVqjWJ8P+fwGnxH12VC2rdX1LyGmVLCv+SnaC6/7E4nSf3WBlb2brDe/6E0L4wX0a9qwgEQzknOXqAtITwcdN1QeW/n8H+8UlBl1D3X78GcvqusdfnQIDAQABMA0GCSqGSIb3DQEBCwUAA4GBAFFz1jnbiXlewOTjMrWXrPWsA4tvzgUO4EEGlOQi4CEXiu74/6PlaBPS3Z1i+roc5xn+8i5nry7HcPFwOLOVO0jARlYinwLNjyWDXdeq2PyH+990+RTJqjDcWN9iou6QY/2j59FQy8OwI3uaiN7OlU78ePhygnJJWF3aiqSb09vL</X509Certificate></X509Data></KeyInfo></Signature></r:issuer></r:license></msrel:RelData></KeyInfo></Signature></asmv1:assembly>
