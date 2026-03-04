@@ -1,6 +1,25 @@
 # JAMES USHER 2026
 
-import DBR as dbr
+from DBR import DBR_Spectrometer
 
-dbr.laser_manual_scan()
-#dbr.laser_auto_scan()
+laser = DBR_Spectrometer()
+laser.scan(mode="manual")
+
+laser2 = DBR_Spectrometer(
+    mode = "auto",
+    start_index = 3000, 
+    end_index = 3200,
+    interpolation_type = "curve_fit", 
+    interpolation_value = 3, 
+    plot_choice = True, 
+    plot_both = True,
+    delay = 0.01, 
+    sending_packets = False,
+    sanatize = False, 
+    log_voltage = False)
+
+input("to continue enter anything: ")
+
+laser2.scan()
+
+#dbr.laser_auto_scan(LOG_VOLTAGE = True)a

@@ -2,7 +2,7 @@
 
 import serial
 import serial.tools.list_ports
-import generate_table as table #generate_table.py in /DBR/DAC_Tables/*
+import DBR.generate_table_old as table #generate_table.py in /DBR/DAC_Tables/*
 import sys
 import os 
 import glob

@@ -7,22 +7,7 @@ import scienceplots
 import glob 
 import os 
 from scipy.optimize import curve_fit
-
 plt.style.use(["science", "grid"])
-
-'''
-max_fm = 57954
-min_fm = 668
-
-max_bm = 43418
-min_bm = 982
-
-max_ph = 17448
-min_ph = 2496
-
-max_soa = 45527
-min_soa = 14319
-'''
 
 def linear_function(x, m, b): return m*x + b
 
@@ -31,46 +16,132 @@ DAC_TABLE_PATH_LIST = glob.glob(CWD+'/UU341_LUT_0v0.csv', recursive=True)
 if not DAC_TABLE_PATH_LIST: raise Exception("UU341_LUT_0v0.csv not found in CWD") 
 else: DAC_TABLE_PATH = DAC_TABLE_PATH_LIST[0]
 
-def get_DAC_arrays_from_table(csv_table_path:str, bounds:bool=False, start_index:int = 0, end_index:int = 9999):
- 
-    IDX,FM,BM,PH,SOA,WL = [],[],[],[],[],[] 
+class DAC_Table:
+    def __init__(self, start_index: int = 0, end_index: int = 9999, 
+                 interpolate_value: int = 3, interpolate_type: str = "linear"): 
 
-    with open(csv_table_path, newline='') as f:
-        reader = csv.reader(f, delimiter=',', quotechar='|')
-        next(reader) #skip headers
-        for row in reader:
-            IDX.append(int(row[0]))
-            FM.append(int(row[1]))
-            BM.append(int(row[2]))
-            PH.append(int(row[3]))
-            SOA.append(int(row[4]))
-            WL.append(float(row[5]))
-    if bounds: 
-        idx = IDX[start_index:end_index]
-        fm = FM[start_index:end_index]
-        bm = BM[start_index:end_index]
-        ph = PH[start_index:end_index]
-        soa = SOA[start_index:end_index]
-        wl = WL[start_index:end_index]
-        return [idx,fm,bm,ph,soa,wl]
-    else:
-        return [IDX,FM,BM,PH,SOA,WL]
+        self.start_index = start_index
+        self.end_index = end_index
+        self.interpolate_value = interpolate_value
+        self.interpolate_type = interpolate_type
 
-def generate_DAC_table(interpolate_type: str = "linear", interpolate_val:int = 0, start_index:int = 0, end_index:int = 9999, plot:bool = True, plot_both:bool = False):
-    DAC_arrays = get_DAC_arrays_from_table(DAC_TABLE_PATH, True, start_index, end_index) #this is what narrows down what we are interpolating between
+    def update_DAC_values(self, controllers: list[list]):
+        self.idx = controllers[0]
+        self.fm = controllers[1]
+        self.bm = controllers[2]
+        self.ph = controllers[3]
+        self.soa = controllers[4]
+        self.wl = controllers[5]
 
-    #if not interpolate_val: return DAC_TABLE_PATH
-    idx,fm,bm,ph,soa,wl = DAC_arrays[0],DAC_arrays[1],DAC_arrays[2],DAC_arrays[3],DAC_arrays[4],DAC_arrays[5]
+    def get_DAC_arrays(self, csv_table_path, apply_bounds: bool = False):
+
+        IDX,FM,BM,PH,SOA,WL = [],[],[],[],[],[] 
+
+        start_index = self.start_index
+        end_index = self.end_index
     
-    if interpolate_val and interpolate_type == "linear": 
+        with open(csv_table_path, newline='') as f:
+            reader = csv.reader(f, delimiter=',', quotechar='|')
+            next(reader) #skip headers
+            for row in reader:
+                IDX.append(int(row[0]))
+                FM.append(int(row[1]))
+                BM.append(int(row[2]))
+                PH.append(int(row[3]))
+                SOA.append(int(row[4]))
+                WL.append(float(row[5]))
+        if apply_bounds:
+            idx = IDX[start_index:end_index]
+            fm = FM[start_index:end_index]
+            bm = BM[start_index:end_index]
+            ph = PH[start_index:end_index]
+            soa = SOA[start_index:end_index]
+            wl = WL[start_index:end_index]
+            controllers = [idx,fm,bm,ph,soa,wl]
+        else: 
+            controllers = [IDX,FM,BM,PH,SOA,WL]
+    
+        return controllers
 
+    def _write_DAC_table(self) -> str:
+        '''
+        Takes in DAC values and Generates csv file.
+
+        Returns
+        -------
+
+        new_table_path (str) : The file path to the newly generated DAC table csv file. (should be in DBR/DAC_Tables).
+        '''
+        if self.interpolate_type == "linear":
+            new_table_path = CWD+f'/DAC_Tables/INTERP_({self.interpolate_value}, {self.start_index}, {self.end_index}).csv'
+
+        if self.interpolate_type == "curve_fit":
+            new_table_path = CWD+f'/DAC_Tables/EXTRAP_({self.interpolate_value}, {self.start_index}, {self.end_index}).csv'
+
+        with open(new_table_path, 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile, delimiter=',', quotechar='|')
+            writer.writerow(['IDX','FM DAC','BM DAC','PH DAC','SOA DAC','WL Target'])
+            for row in range(0, len(self.new_wl)):
+                writer.writerow([row, self.r_fm[row], self.r_bm[row], self.r_ph[row], self.r_soa[row], self.new_wl[row]])
+
+        return new_table_path
+    
+    def plot(self, plot_both: bool = False):
         fig, ax = plt.subplots()
         plt.gcf().set_size_inches(8,6)
 
-        print(f"interpolating with {interpolate_val} intermediate values generated")
-        res = interpolate_val+1
+        ax.plot(self.new_wl, self.r_fm, 'o--', ms=0.85, linewidth=0.5, label=r"FM")
+        ax.plot(self.new_wl, self.r_bm, 'o--', ms=0.85, linewidth=0.5, label=r"BM")
+        ax.plot(self.new_wl, self.r_ph, 'o--', ms=0.85, linewidth=0.5, label=r"PH")
+        ax.plot(self.new_wl, self.r_soa, 'o--', ms=0.85, linewidth=0.5, label=r"SOA")
+
+        if not self.interpolate_value:
+            plt.title(f'Default DAC Parameters ({self.start_index}, {self.end_index})')
+
+        if self.interpolate_value > 0 and self.interpolate_type == "linear": #for clarity's sake
+            plt.title(f'DAC Parameters ({self.start_index}, {self.end_index}) Interpolated with {self.interpolate_value} Intermediate Integer Values')
+
+        if self.interpolate_value > 0 and self.interpolate_type == "curve_fit":
+            plt.title(f'DAC Parameters ({self.start_index}, {self.end_index}) Extrapolated with {self.interpolate_value} Intermediate Integer Values')
+
+        if plot_both or not self.interpolate_value:
+
+            ax.plot(self.wl, self.fm, 'o--', ms=0.85, linewidth=0.5, label=r"FM")
+            ax.plot(self.wl, self.bm, 'o--', ms=0.85, linewidth=0.5, label=r"BM")
+            ax.plot(self.wl, self.ph, 'o--', ms=0.85, linewidth=0.5, label=r"PH")
+            ax.plot(self.wl, self.soa, 'o--', ms=0.85, linewidth=0.5, label=r"SOA")
+
+        plt.xlabel(r'$\text{Wavelength} ( \lambda )$')
+        plt.ylabel(r"DAC Value")
+        plt.legend()
+
+        if self.interpolate_type == "linear":
+            plt.savefig(CWD+f'/Plots/INTERP_({self.interpolate_value}, {self.start_index}, {self.end_index}).pdf', format='pdf')
+
+        if self.interpolate_type == "curve_fit":
+            plt.savefig(CWD+f'/Plots/EXTRAP_({self.interpolate_value}, {self.start_index}, {self.end_index}).pdf', format='pdf')
+
+        plt.show()
+
+    def _linear_interpolate(self) -> str:
+        '''
+        Takes controller values from DAC table and linearly interpolates new DAC values. Saves new values to self.r_[controller_name]. Also generates new DAC table with new values.
+        
+        Returns
+        -------
+
+        new_table_path (str) : The file path to the newly generated DAC table csv file. (should be in DBR/DAC_Tables).
+        '''
+        fm = self.fm
+        bm = self.bm
+        ph = self.ph
+        soa = self.soa
+        wl = self.wl
+
+        print(f"interpolating with {self.interpolate_value} intermediate values generated")
+        res = self.interpolate_value+1
         delta = 0.004499549999999999 / res
-        new_idx,new_fm,new_bm,new_ph,new_soa,new_wl  = [],[],[],[],[],[]
+        new_fm,new_bm,new_ph,new_soa,new_wl  = [],[],[],[],[]
     
         for i in range(0, len(wl)-1):
             #i is index of current left bound DAC value
@@ -107,20 +178,18 @@ def generate_DAC_table(interpolate_type: str = "linear", interpolate_val:int = 0
         for val in new_ph: r_ph.append(round(val))
         for val in new_soa: r_soa.append(round(val))
 
-        if plot: 
-            ax.plot(new_wl, r_fm, 'o--', ms=0.85, linewidth=0.5, label=r"FM")
-            ax.plot(new_wl, r_bm, 'o--', ms=0.85, linewidth=0.5, label=r"BM")
-            ax.plot(new_wl, r_ph, 'o--', ms=0.85, linewidth=0.5, label=r"PH")
-            ax.plot(new_wl, r_soa, 'o--', ms=0.85, linewidth=0.5, label=r"SOA")
-        
-        new_table_path = CWD+f'/DAC_Tables/INTERP_({interpolate_val}, {start_index}, {end_index}).csv'
-        with open(new_table_path, 'w', newline='') as csvfile:
-            writer = csv.writer(csvfile, delimiter=',', quotechar='|')
-            writer.writerow(['IDX','FM DAC','BM DAC','PH DAC','SOA DAC','WL Target'])
-            for row in range(0, len(new_wl)):
-                writer.writerow([row, r_fm[row], r_bm[row], r_ph[row], r_soa[row], new_wl[row]])
-    
-    if interpolate_type == "curve_fit":
+        return self._write_DAC_table()
+
+    def _curve_fit(self) -> str:
+        '''
+        Extrapolates new DAC values by fitting curves (lines) to original DAC table. Creates new DAC table and saves new points to self.r_[controller_name].
+
+        Returns
+        -------
+
+        new_table_path (str) : The file path to the newly generated DAC table csv file. (should be in DBR/DAC_Tables).
+        '''
+
         #https://stackoverflow.com/a/49087165
         #https://stackoverflow.com/a/64929683
         #https://stackoverflow.com/a/48507056
@@ -130,20 +199,6 @@ def generate_DAC_table(interpolate_type: str = "linear", interpolate_val:int = 0
         -- from the manual -- 
         DAC GUI
 
-        The DAC GUI can be accessed from the FP42xx GUI Utility
-        menu. This GUI allows the user to control the individual
-        laser section drive strength as well as adjust the laser
-        operating temperature.
-        Temperature Control
-
-        The Temperature control portion of the GUI allows the
-        user to set and read laser temperature as well as read TEC
-        Voltage in 16-bit DAC counts with a midscale 32767. The
-        Set Temp button allows the user to set a temperature in
-        centi-Celsius or deg C*100. (i.e. 4000 deg cC = 40 deg C).
-        Read Temp button reads the current operating
-        temperature back from the module in centi-Celsius.
-    
         "The Laser Drive Portion of the GUI allows the user to
         drive each laser section manually. Full scale on each
         current source is 65535." 
@@ -153,168 +208,141 @@ def generate_DAC_table(interpolate_type: str = "linear", interpolate_val:int = 0
         this is the maxmimum unsigned 16 bit int, which makes sense
 
         '''
-        res = interpolate_val+1
+        res = self.interpolate_value+1
         delta = 0.004499549999999999 / res
-        new_idx,new_fm,new_bm,new_ph,new_soa,new_wl  = [],[],[],[],[],[]
-        controllers = [fm,bm,ph,soa]
+        new_fm,new_bm,new_ph,new_soa,new_wl  = [],[],[],[],[]
         controller_names = ["FM", "BM", "PH", "SOA"]
 
+        wl = self.wl
+        controllers = [self.fm, self.bm, self.ph, self.soa]
         controller_thresholds = [30,30,150,60] #tuned by trial and error, could use algorithm instead?
 
-        fig, ax = plt.subplots()
-        plt.gcf().set_size_inches(8,6)
-        
-        #print(f"wl {len(wl)}")
-        #print(f"ph {len(ph)}")
+        for j in range(len(controllers)-1): 
+            controller = controllers[j]
+            controller_name = controller_names[j]
+            controller_threshold = controller_thresholds[j]
 
-        if interpolate_val > 0:
-            for j in range(len(controllers)): 
-                controller = controllers[j]
-                controller_name = controller_names[j]
-                #print(controller_name)
-                controller_threshold = controller_thresholds[j]
+            discontinuities_controller_indices = np.where(abs(np.diff(np.array(controller))) > controller_threshold)[0]
 
-                discontinuities_controller_indices = np.where(abs(np.diff(np.array(controller))) > controller_threshold)[0]
+            if discontinuities_controller_indices.size == 0:
+                print("NO DISCONTINUTIES")
 
-                if discontinuities_controller_indices.size == 0:
-                    print("NO DISCONTINUTIES")
+            #print(f"{controller_name}: {discontinuities_controller_indices.size}")
+            #print(discontinuities_controller_indices)
 
-                print(f"{controller_name}: {discontinuities_controller_indices.size}")
-                #print(discontinuities_controller_indices)
+            r_values = []
+            w_values = []
 
-                r_values = []
-                w_values = []
+            for i in range(discontinuities_controller_indices.size): 
 
-                for i in range(discontinuities_controller_indices.size): 
+                if i != 0: 
+                    x = wl[discontinuities_controller_indices[i-1]+1:discontinuities_controller_indices[i]+1]
+                    y = controller[discontinuities_controller_indices[i-1]+1:discontinuities_controller_indices[i]+1]
 
-                    if i != 0: 
-                        x = wl[discontinuities_controller_indices[i-1]+1:discontinuities_controller_indices[i]+1]
-                        y = controller[discontinuities_controller_indices[i-1]+1:discontinuities_controller_indices[i]+1]
+                if i == discontinuities_controller_indices.size - 1:
+                    x = wl[discontinuities_controller_indices[i-1]+1:]
+                    y = controller[discontinuities_controller_indices[i-1]+1:]
 
-                    if i == discontinuities_controller_indices.size - 1:
-                        x = wl[discontinuities_controller_indices[i-1]+1:]
-                        y = controller[discontinuities_controller_indices[i-1]+1:]
+                if i == 0:
+                    x = wl[:discontinuities_controller_indices[0]+1]
+                    y = controller[:discontinuities_controller_indices[0]+1]
+    
+                xfine = np.linspace(min(x), max(x)+(delta*res), len(x)*res + 1)
+                xfine = np.delete(xfine, -1) #get rid of overlaps
+                for wavelength in xfine: 
+                    w_values.append(wavelength)
 
-                    if i == 0:
-                        x = wl[:discontinuities_controller_indices[0]+1]
-                        y = controller[:discontinuities_controller_indices[0]+1]
-         
-                               
-                    xfine = np.linspace(min(x), max(x)+(delta*res), len(x)*res + 1)
-                    xfine = np.delete(xfine, -1) #get rid of overlaps
-                    for wavelength in xfine: 
-                        w_values.append(wavelength)
+                if len(y) != 1:
+                    popt, pcov = curve_fit(linear_function, x, y)
+                    extrapolated_values = linear_function(xfine, *popt)
+                    for value in extrapolated_values: 
+                        r_values.append(round(value))
 
-                    if len(y) != 1:
-                        popt, pcov = curve_fit(linear_function, x, y)
-                        extrapolated_values = linear_function(xfine, *popt)
-                        for value in extrapolated_values: 
-                            r_values.append(round(value))
+                else: #you cant fit a curve to a single point lol (this bug caused such a headache)
+                    extrapolated_values = [y[0]]
+                    next_value = y[0]
+                    for i in range(res-1):
+                        extrapolated_values.append(round(next_value))
 
-                    else: #you cant fit a curve to a single point lol (this bug caused such a headache)
-                        extrapolated_values = [y[0]]
-                        next_value = y[0]
-                        for i in range(res-1):
-                            extrapolated_values.append(round(next_value))
+                    for value in extrapolated_values: 
+                        r_values.append(round(value))
+                
+            if self.interpolate_value: self.new_wl = w_values
 
-                        for value in extrapolated_values: 
-                            r_values.append(round(value))
-                    
-                if interpolate_val:
-                    new_wl = w_values
+            match controller_name:
+                case "FM": self.r_fm = r_values
+                case "BM": self.r_bm = r_values
+                case "PH": self.r_ph = r_values
+                case "SOA": self.r_soa = r_values
 
-                if plot:
-                    plt.plot(w_values, r_values, 'o--', ms=1, label=f"{controller_name}")
+        return self._write_DAC_table()
 
-                match controller_name:
-                    case "FM": r_fm = r_values
-                    case "BM": r_bm = r_values
-                    case "PH": r_ph = r_values
-                    case "SOA": r_soa = r_values
+    def generate_DAC_table(self, interpolate_type: str = "linear", start_index:int = 0, end_index:int = 9999, plot_choice:bool = True, plot_both:bool = False) -> str:
+        '''
+        Generates new DAC table and outputs the path to the new table.
 
-            new_table_path = CWD+f'/DAC_Tables/EXTRAP_({interpolate_val}, {start_index}, {end_index}).csv'
-            with open(new_table_path, 'w', newline='') as csvfile:
-                writer = csv.writer(csvfile, delimiter=',', quotechar='|')
-                writer.writerow(['IDX','FM DAC','BM DAC','PH DAC','SOA DAC','WL Target'])
-                for row in range(0, len(new_wl)):
-                    writer.writerow([row, r_fm[row], r_bm[row], r_ph[row], r_soa[row], new_wl[row]])
-    if plot:
+        Returns
+        -------
 
-        if not interpolate_val:
-            plt.title(f'Default DAC Parameters ({start_index}, {end_index})')
+        new_table_path (str) : The file path to the newly generated DAC table csv file. (should be in DBR/DAC_Tables).
+        '''
+        #csv_table_path = DAC_TABLE_PATH
+        DAC_arrays = self.get_DAC_arrays(DAC_TABLE_PATH, apply_bounds=True) #this is what narrows down what we are interpolating between
+        self.update_DAC_values(DAC_arrays) #writes values to self variables 
 
-        if interpolate_val > 0 and interpolate_type == "linear": #for clarity's sake
-            plt.title(f'DAC Parameters ({start_index}, {end_index}) Interpolated with {interpolate_val} Intermediate Integer Values')
+        #if not interpolate_val: return DAC_TABLE_PATH
 
-        if interpolate_val > 0 and interpolate_type == "curve_fit":
-            plt.title(f'DAC Parameters ({start_index}, {end_index}) Extrapolated with {interpolate_val} Intermediate Integer Values')
-
-        if plot_both or not interpolate_val:
-            ax.plot(wl, fm, 'o--', ms=0.85, linewidth=0.5, label=r"FM")
-            ax.plot(wl, bm, 'o--', ms=0.85, linewidth=0.5, label=r"BM")
-            ax.plot(wl, ph, 'o--', ms=0.85, linewidth=0.5, label=r"PH")
-            ax.plot(wl, soa, 'o--', ms=0.85, linewidth=0.5, label=r"SOA")
-
-        plt.xlabel(r'$\text{Wavelength} ( \lambda )$')
-        plt.ylabel(r"DAC Value")
-        plt.legend()
-
-        #ax.legend(fontsize=14)
-        #plt.savefig(f'DBR/Plots/INTERP_({interpolate_val},{start_index},{end_index}).png', dpi=300)
-        if interpolate_type == "linear":
-            plt.savefig(CWD+f'/Plots/INTERP_({interpolate_val}, {start_index}, {end_index}).pdf', format='pdf')
+        if interpolate_type == "linear": 
+            new_table_path = self._linear_interpolate()
 
         if interpolate_type == "curve_fit":
-            plt.savefig(CWD+f'/Plots/EXTRAP_({interpolate_val}, {start_index}, {end_index}).pdf', format='pdf')
-
-        plt.show()
-
-    if not interpolate_val: 
+            new_table_path = self._curve_fit()
         
-        return DAC_TABLE_PATH
+        if plot_choice: self.plot(plot_both=plot_both)
 
-    print('Generated Table:' + new_table_path)
-    return new_table_path
-    
-def visualize_parameters():
-    DAC_arrays = get_DAC_arrays_from_table(DAC_TABLE_PATH, True, 0, 9999) #this is what narrows down what we are interpolating between
-
-    #if not interpolate_val: return DAC_TABLE_PATH
-    idx,fm,bm,ph,soa,wl = DAC_arrays[0],DAC_arrays[1],DAC_arrays[2],DAC_arrays[3],DAC_arrays[4],DAC_arrays[5]
-
-    fig = plt.figure()
-    ax = fig.add_subplot(projection='3d')
-    names = ["FM", "BM", "PH", "SOA"]
-
-    exclude = "SOA"
-
-    if exclude == "SOA":
-        sizes = (np.array(soa) * np.array(soa)) / 15000000
-        sc = ax.scatter(fm, bm, ph, c = wl, s = sizes, cmap='viridis', marker='o')
-        ax.set_xlabel('FM')
-        ax.set_ylabel('BM')
-        ax.set_zlabel('PH')
-    
-        fig.colorbar(sc, ax = ax, pad = 0.1, label='Wavelength')
-        plt.title(f'5D LUT Visualization for FM, BM, PH, with size dependent on SOA')
-        plt.savefig(CWD+f'/Plots/VIS_(FM,BM,PH,SOA).pdf', format='pdf')
-
-        plt.show()
-    if exclude == "PH":
-        sizes = (np.array(ph) * np.array(ph)) / 15000000
-        sc = ax.scatter(fm, bm, soa, c = wl, s=sizes, cmap='viridis', marker='o')
-        ax.set_xlabel('FM')
-        ax.set_ylabel('BM')
-        ax.set_zlabel('SOA')
+        print('Generated Table:' + new_table_path)
+        return new_table_path
         
-        fig.colorbar(sc, ax = ax, pad = 0.1, label='Wavelength')
-        plt.title(f'5D LUT Visualization for FM, BM, SOA, with size dependent on PH')
-        plt.savefig(CWD+f'/Plots/VIS_(FM,BM,SOA,PH).pdf', format='pdf')
+    def visualize_parameters_5D(self):
+        DAC_arrays = self.get_DAC_arrays() #this is what narrows down what we are interpolating between
 
-        plt.show()
-    pass
-#generate_DAC_table(interpolate_val=3, start_index=400, end_index=450)
+        #if not interpolate_val: return DAC_TABLE_PATH
+        fm,bm,ph,soa,wl = DAC_arrays[1],DAC_arrays[2],DAC_arrays[3],DAC_arrays[4],DAC_arrays[5]
 
-#generate_DAC_table(interpolate_type = "linear", interpolate_val = 0, start_index=5000, end_index=6000, plot=True)
+        fig = plt.figure()
+        ax = fig.add_subplot(projection='3d')
+        names = ["FM", "BM", "PH", "SOA"]
 
-visualize_parameters()
+        exclude = "SOA"
+
+        if exclude == "SOA":
+            sizes = (np.array(soa) * np.array(soa)) / 15000000
+            sc = ax.scatter(fm, bm, ph, c = wl, s = sizes, cmap='viridis', marker='o')
+            ax.set_xlabel('FM')
+            ax.set_ylabel('BM')
+            ax.set_zlabel('PH')
+        
+            fig.colorbar(sc, ax = ax, pad = 0.1, label='Wavelength')
+            plt.title(f'5D LUT Visualization for FM, BM, PH, with size dependent on SOA')
+            plt.savefig(CWD+f'/Plots/VIS_(FM,BM,PH,SOA).pdf', format='pdf')
+
+            plt.show()
+
+        if exclude == "PH":
+            sizes = (np.array(ph) * np.array(ph)) / 15000000
+            sc = ax.scatter(fm, bm, soa, c = wl, s=sizes, cmap='viridis', marker='o')
+            ax.set_xlabel('FM')
+            ax.set_ylabel('BM')
+            ax.set_zlabel('SOA')
+            
+            fig.colorbar(sc, ax = ax, pad = 0.1, label='Wavelength')
+            plt.title(f'5D LUT Visualization for FM, BM, SOA, with size dependent on PH')
+            plt.savefig(CWD+f'/Plots/VIS_(FM,BM,SOA,PH).pdf', format='pdf')
+
+            plt.show()
+        pass
+    #generate_DAC_table(interpolate_val=3, start_index=400, end_index=450)
+
+    #generate_DAC_table(interpolate_type = "linear", interpolate_val = 0, start_index=5000, end_index=6000, plot=True)
+
+    #visualize_parameters()
