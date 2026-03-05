@@ -4,6 +4,8 @@ from DBR import DBR_Spectrometer
 
 laser = DBR_Spectrometer()
 laser.toggle()
+input("continue: ")
+laser.toggle()
 
 laser.scan(mode="manual")
 

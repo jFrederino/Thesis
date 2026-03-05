@@ -66,12 +66,15 @@ class DBR_Spectrometer:
             self.sanatize = sanatize
             self.log_voltage = log_voltage
             self._voltage_data = []
-            self._laser_on = False
+            self.laser_on = False
+            self.laser_connected = False
 
-    def toggle(self): #I WIN 
-        
+    def toggle(self): #I WIN !!!
+        if not self.laser_connected: 
+            self._connect_to_laser("COM4")
+            self.laser_connected = True
         '''
-        SOURCE CODE
+        SOURCE CODE DECOMPILED FROM GUI
 
         if (((Control)btnLaserEnableDisable).Text == "Enable Laser")
             {
@@ -92,19 +95,19 @@ class DBR_Spectrometer:
         }
         '''
         _ON = [bytes([167, 0, 0, 0]), bytes([144, 255, 0, 0]), bytes([167, 0, 0, 0])]
-        _OFF = [bytes([167, 0, 0, 0]), bytes([144, 0, 0, 0])]
+        _OFF = [bytes([167, 0, 0, 0]), bytes([144, 0, 0, 0]), bytes([167, 0, 0, 0])]
 
-        if self._laser_on: 
+        if self.laser_on: 
             for packet in _OFF: 
                 self._laser_serial.write(packet)
                 self._read_response()
-            self.laser_on = True
+            self.laser_on = False
         else:
             for packet in _ON: 
                 self._laser_serial.write(packet)
                 self._read_response()
             self.set_laser_target(fm_val=11425, bm_val=4698, ph_val=17448, soa_val=24222)
-            self._laser_on = False
+            self.laser_on = True
 
     def set_laser_target(self, fm_val:int, bm_val:int, ph_val:int, soa_val:int):
         try: self._laser_serial
@@ -168,6 +171,7 @@ class DBR_Spectrometer:
                 value_lsb = response[2]
                 status = response[3]
 
+                name = "unknown"
                 match reg:
                     case 0x13: name = "FM"
                     case 0x12: name = "BM"
@@ -179,8 +183,6 @@ class DBR_Spectrometer:
                     print(f"{name} Current DAC = {gain_value}")
                     if self.log_voltage: 
                         self._voltage_data.append(self._read_voltage())
-
-
                 else:
                     print(f"Error: status code 0x{status:X}")
 
