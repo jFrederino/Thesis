@@ -3,6 +3,8 @@
 from DBR import DBR_Spectrometer
 
 laser = DBR_Spectrometer()
+laser.toggle()
+
 laser.scan(mode="manual")
 
 laser2 = DBR_Spectrometer(

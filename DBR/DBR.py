@@ -66,6 +66,65 @@ class DBR_Spectrometer:
             self.sanatize = sanatize
             self.log_voltage = log_voltage
             self._voltage_data = []
+            self._laser_on = False
+
+    def toggle(self): #I WIN 
+        
+        '''
+        SOURCE CODE
+
+        if (((Control)btnLaserEnableDisable).Text == "Enable Laser")
+            {
+                ushort regData = 0;
+                hostComm.WriteRegister(39, regData);
+                ((Control)btnLaserEnableDisable).Text = "Disable Laser";
+                hostComm.WriteRegister(16, Convert.ToUInt16(40959));
+                regData = 3840;
+                hostComm.WriteRegister(39, regData);
+            }
+            else
+            {
+                ((Control)btnLaserEnableDisable).Text = "Enable Laser";
+                ushort regData = 0;
+                hostComm.WriteRegister(39, regData);
+                hostComm.WriteRegister(16, Convert.ToUInt16(0));
+            }
+        }
+        '''
+        _ON = [bytes([167, 0, 0, 0]), bytes([144, 255, 0, 0]), bytes([167, 0, 0, 0])]
+        _OFF = [bytes([167, 0, 0, 0]), bytes([144, 0, 0, 0])]
+
+        if self._laser_on: 
+            for packet in _OFF: 
+                self._laser_serial.write(packet)
+                self._read_response()
+            self.laser_on = True
+        else:
+            for packet in _ON: 
+                self._laser_serial.write(packet)
+                self._read_response()
+            self.set_laser_target(fm_val=11425, bm_val=4698, ph_val=17448, soa_val=24222)
+            self._laser_on = False
+
+    def set_laser_target(self, fm_val:int, bm_val:int, ph_val:int, soa_val:int):
+        try: self._laser_serial
+        except NameError: self._connect_to_laser("COM4")
+
+        fm_hex = helper.val_to_split_hex(fm_val)
+        bm_hex = helper.val_to_split_hex(bm_val)
+        ph_hex = helper.val_to_split_hex(ph_val)
+        soa_hex = helper.val_to_split_hex(soa_val)
+
+        fm_packet =  bytes([(0x13)|(1 << 7), fm_hex[0], fm_hex[1], 0x00 ])
+        bm_packet =  bytes([(0x12)|(1 << 7), bm_hex[0], bm_hex[1], 0x00 ])
+        ph_packet =  bytes([(0x11)|(1 << 7), ph_hex[0], ph_hex[1], 0x00 ])
+        soa_packet =  bytes([(0x14)|(1 << 7), soa_hex[0], soa_hex[1], 0x00 ])
+
+        packets = [fm_packet, bm_packet, ph_packet, soa_packet]
+        for packet in packets:
+            self._laser_serial.write(packet)
+            self._read_response()
+           
     def _get_interpolation_type(self, start_message):
             self.interpolation_type = helper.get_user_input(message = start_message, input_type="str")
             if self.interpolation_type not in ["linear", "curve_fit"]:
