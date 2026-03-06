@@ -66,52 +66,56 @@ class DBR_Spectrometer:
             self.sanatize = sanatize
             self.log_voltage = log_voltage
             self._voltage_data = []
-            self.laser_on = False
-            self.laser_connected = False
+            self._laser_on = False
+            self._laser_connected = False
 
     def toggle(self): #I WIN !!!
-        if not self.laser_connected: 
-            self._connect_to_laser("COM4")
-            self.laser_connected = True
         '''
-        SOURCE CODE DECOMPILED FROM GUI
+        Turns the laser output on if its off, and off if its on
 
-        if (((Control)btnLaserEnableDisable).Text == "Enable Laser")
+        '''
+        self._connect_to_laser("COM4")
+
+
+        '''
+        SOURCE CODE DECOMPILED FROM GUI                                                 # commentary by me though
+
+        if (((Control)btnLaserEnableDisable).Text == "Enable Laser")                    # they check if its on or not by reading what the button on the gui says. not what the laser is doing. the button text.
             {
                 ushort regData = 0;
-                hostComm.WriteRegister(39, regData);
+                hostComm.WriteRegister(39, regData);                                
                 ((Control)btnLaserEnableDisable).Text = "Disable Laser";
-                hostComm.WriteRegister(16, Convert.ToUInt16(40959));
-                regData = 3840;
-                hostComm.WriteRegister(39, regData);
+                hostComm.WriteRegister(16, Convert.ToUInt16(40959));                    # thats just 255 in the second byte
+            regData = 3840;                                                             # thats just zero but fancy 
+                hostComm.WriteRegister(39, regData);                                    # gets split and bit shifted and becomes zeros
             }
             else
             {
                 ((Control)btnLaserEnableDisable).Text = "Enable Laser";
                 ushort regData = 0;
                 hostComm.WriteRegister(39, regData);
-                hostComm.WriteRegister(16, Convert.ToUInt16(0));
+                hostComm.WriteRegister(16, Convert.ToUInt16(0));                        # it will never cease to baffle me that they write zero to the same register in different ways multiple times
             }
         }
         '''
         _ON = [bytes([167, 0, 0, 0]), bytes([144, 255, 0, 0]), bytes([167, 0, 0, 0])]
-        _OFF = [bytes([167, 0, 0, 0]), bytes([144, 0, 0, 0]), bytes([167, 0, 0, 0])]
+        _OFF = [bytes([167, 0, 0, 0]), bytes([144, 0, 0, 0]), bytes([167, 0, 0, 0])] #last one might not be nessesary, but it looks better
 
-        if self.laser_on: 
+        if self._laser_on: 
             for packet in _OFF: 
                 self._laser_serial.write(packet)
                 self._read_response()
-            self.laser_on = False
+            self._laser_on = False
         else:
             for packet in _ON: 
                 self._laser_serial.write(packet)
                 self._read_response()
             self.set_laser_target(fm_val=11425, bm_val=4698, ph_val=17448, soa_val=24222)
-            self.laser_on = True
+            self._laser_on = True
 
     def set_laser_target(self, fm_val:int, bm_val:int, ph_val:int, soa_val:int):
         try: self._laser_serial
-        except NameError: self._connect_to_laser("COM4")
+        except: self._connect_to_laser("COM4")
 
         fm_hex = helper.val_to_split_hex(fm_val)
         bm_hex = helper.val_to_split_hex(bm_val)
@@ -135,18 +139,23 @@ class DBR_Spectrometer:
             else: return self.interpolation_type
 
     def _connect_to_laser(self, target_port: str):
-        ports = serial.tools.list_ports.comports()
-        for port, desc, hwid in sorted(ports):
-            print("{} : {} [{}]".format(port, desc, hwid))
+        try: 
+            self._laser_serial
+            print("Laser already connected")
+        except:
+            ports = serial.tools.list_ports.comports()
+            for port, desc, hwid in sorted(ports):
+                print("{} : {} [{}]".format(port, desc, hwid))
 
-        self._laser_serial = serial.Serial(
-            port = target_port, 
-            baudrate = 9600, 
-            bytesize = serial.EIGHTBITS,
-            parity = serial.PARITY_NONE, 
-            timeout = 1) 
-        
-        print(f"Serial port {self._laser_serial.name} opened successfully.")
+            self._laser_serial = serial.Serial(
+                port = target_port, 
+                baudrate = 9600, 
+                bytesize = serial.EIGHTBITS,
+                parity = serial.PARITY_NONE, 
+                timeout = 1) 
+            
+            print(f"Serial port {self._laser_serial.name} opened successfully.")
+            self._laser_connected = True
 
     def _write_voltage(self):
         CWD = os.path.dirname(os.path.realpath(__file__))
@@ -163,46 +172,31 @@ class DBR_Spectrometer:
                 writer.writerow([row, self._voltage_data[row]])
 
     def _read_response(self):
-                response = self._laser_serial.read(4)
-                tqdm.write(f"Full Response: {response}")
+        response = self._laser_serial.read(4)
+        tqdm.write(f"Full Response: {response}")
 
-                reg = response[0]
-                value_msb = response[1]
-                value_lsb = response[2]
-                status = response[3]
+        reg = response[0]
+        value_msb = response[1]
+        value_lsb = response[2]
+        status = response[3]
 
-                name = "unknown"
-                match reg:
-                    case 0x13: name = "FM"
-                    case 0x12: name = "BM"
-                    case 0x11: name = "PH"
-                    case 0x14: name = "SOA"
+        name = "unknown"
+        match reg:
+            case 0x13: name = "FM"
+            case 0x12: name = "BM"
+            case 0x11: name = "PH"
+            case 0x14: name = "SOA"
+        
+        if status == 0x01:
+            gain_value = (value_msb << 8) | value_lsb
+            print(f"{name} Current DAC = {gain_value}")
+            if self.log_voltage: 
+                self._voltage_data.append(self._read_voltage())
+        else:
+            print(f"Error: status code 0x{status:X}")
+            self._laser_serial.close()
+            sys.exit()
                 
-                if status == 0x01:
-                    gain_value = (value_msb << 8) | value_lsb
-                    print(f"{name} Current DAC = {gain_value}")
-                    if self.log_voltage: 
-                        self._voltage_data.append(self._read_voltage())
-                else:
-                    print(f"Error: status code 0x{status:X}")
-
-                if response != b'': 
-                    reg = response[0]
-                    value_msb = response[1]
-                    value_lsb = response[2]
-
-                    status = response[3] 
-                    if status == 0x01: 
-                        tqdm.write(f"Status: {status} = all good \n")
-                        
-                    else:
-                        print(f"Error: status code 0x{status:X}")
-                        self._laser_serial.close()
-                        sys.exit()
-                else: 
-                    print("Response Empty")
-
-
     def _send_packets(self, DAC_list: list[list], manual: bool = True):
         '''
         Sends Packets to Instatune Laser Module.
@@ -272,25 +266,25 @@ class DBR_Spectrometer:
             
             tqdm.write(f"waiting {self.delay} second(s)...")
             time.sleep(self.delay)
-            simulate_response = self.sending_packets
+
             if self.sending_packets: 
                 for j in range(4): 
-                    self._laser_serial.write(packets[i][0])
+                    self._laser_serial.write(packets[i][j])
                     self._read_response()
-                    self._laser_serial.write(packets[i][1])
-                    self._read_response()
-                    self._laser_serial.write(packets[i][2])
-                    self._read_response()
-                    self._laser_serial.write(packets[i][3])
-                    self._read_response()
-
+            else: 
+                fake_response = bytes([0,0,0,1])
+                for j in range(4): 
+                    print(fake_response)
+                    tqdm.write(f"Status: {1} = all good \n")
             
     def _manual_setup(self):
         '''
         Allows for configuration of DBR Spectrometer Settings via command line.
         '''
         self.sending_packets = helper.get_user_input(message="Send Packets to Laser Y/N: ", input_type="y/n")
-        if self.sending_packets: self._connect_to_laser(target_port = helper.get_user_input(message="Input Target Port: ", input_type="str"))
+        if self.sending_packets: 
+            try: self._laser_serial
+            except: self._connect_to_laser(target_port = helper.get_user_input(message="Input Target Port: ", input_type="str"))
 
         self.log_voltage = helper.get_user_input("Log Voltage Y/N: ", input_type="y/n")
         if self.log_voltage: 
@@ -308,6 +302,8 @@ class DBR_Spectrometer:
         self.plot_choice = helper.get_user_input(message="Plot DAC values Y/N: ", input_type="y/n")
         self.plot_both = helper.get_user_input(message="Plot Original values also Y/N: ", input_type="y/n")
 
+        if helper.get_user_input("Toggle Laser On Y/N: ", input_type="y/n"): self.toggle()
+
     def _read_voltage(self) -> list:
         '''
         Measures voltage via connected Voltmeter
@@ -322,7 +318,9 @@ class DBR_Spectrometer:
     
     def scan(self, mode="manual"):
         '''
-        DBR Spectrometer scans through wavelengths generated via DAC values. Tables can be generated with interpolated or extrapolated values. Manual Setup via command line allows for sending individual packets one at a time. 
+        DBR Spectrometer scans through wavelengths generated via DAC values. 
+        Tables can be generated with interpolated or extrapolated values. 
+        Manual Setup via command line allows for sending individual packets one at a time. 
         '''
         self.mode = mode
 
@@ -333,9 +331,11 @@ class DBR_Spectrometer:
             _manual = False
             if self.sending_packets:
                 try: self._laser_serial
-                except NameError: self._connect_to_laser(target_port = helper.get_user_input(message="Input Target Port: ", input_type="str"))
+                except: self._connect_to_laser(target_port = helper.get_user_input(message="Input Target Port: ", input_type="str"))
         else:
             raise Exception("Mode is neither 'manual' nor 'auto'. ")
+        
+        if not self._laser_on: self.toggle()
     
         CWD = os.path.dirname(os.path.realpath(__file__))
 
