@@ -189,7 +189,7 @@ class DBR_Spectrometer:
         
         if status == 0x01:
             gain_value = (value_msb << 8) | value_lsb
-            print(f"{name} Current DAC = {gain_value}")
+            tqdm.write(f"{name} Current DAC = {gain_value}")
             if self.log_voltage: 
                 self._voltage_data.append(self._read_voltage())
         else:

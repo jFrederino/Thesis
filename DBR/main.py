@@ -9,6 +9,7 @@ laser.toggle()
 
 laser.scan(mode="manual")
 
+input("-------")
 laser2 = DBR_Spectrometer(
     mode = "auto",
     start_index = 3000, 
