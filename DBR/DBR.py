@@ -6,33 +6,9 @@ from timeit import default_timer as timer
 from tqdm import tqdm
 import pyvisa
 import csv 
-
-#import DBR.generate_table_old as table 
 import generate_table as table
 import helper_functions as helper
 
-'''
-#Procedure to turn on laser:
-
-open GUI
-INIT on COM4 probably
-DOWNLOAD DEFAULT LUT -> 1627 nm DEFAULT STARTING WL
-ENABLE laser
-close GUI
-
-RUN CODE
-(make sure to close serial port via pyserial before running any other code, or restarting a program)
-
-#procedure to turn off laser:
-
-open GUI
-INIT on COM4
-ENABLE laser
-DISABLE laser
-close GUI
-
-profit
-'''
 class DBR_Spectrometer:
     '''
     DBR Spectrometer Class Object
@@ -48,7 +24,6 @@ class DBR_Spectrometer:
     plot_both (bool) = False : Decides whether or not to plot original LUT values under newly generated values.
     delay (float) = 0.1 : Delay in seconds between packets sent via serial port. 
     sending_packets (bool) = True : Decides whether to send packets to the Instatune Module. 
-    sanatize (bool) = True : Decides whether to check DAC table values for outliers outside of accepted range.
     log_voltage (bool) = False : Decides whether to setup Voltmeter and log voltages via USB.
     '''
     def __init__(self, mode: str = "manual", start_index: int = 0, end_index: int = 9999, interpolation_type: str = "linear", 
@@ -63,7 +38,7 @@ class DBR_Spectrometer:
             self.plot_both = plot_both
             self.delay = delay
             self.sending_packets = sending_packets
-            self.sanatize = sanatize
+            #self.sanatize = sanatize
             self.log_voltage = log_voltage
 
             self._voltage_data = []
@@ -79,9 +54,9 @@ class DBR_Spectrometer:
         self._connect_to_laser(self._default_serial_port)
 
         #These magic numbers are from the decompiled enable/disable code the GUI uses. Registers are undocumented in manual.
+        #SWEEP = 0                      #GAIN = 255
+        _ON = [bytes([167, 0, 0, 0]), bytes([144, 255, 0, 0])]
 
-        _ON = [bytes([167, 0, 0, 0]), bytes([144, 255, 0, 0]), bytes([167, 0, 0, 0])]
-        #_OFF = [bytes([167, 0, 0, 0]), bytes([144, 0, 0, 0]), bytes([167, 0, 0, 0])] #last one might not be nessesary, but it looks better
 
         if self._laser_on: print("laser is already on.")
         else:
@@ -99,8 +74,8 @@ class DBR_Spectrometer:
         '''
         self._connect_to_laser(self._default_serial_port)
 
-        #_ON = [bytes([167, 0, 0, 0]), bytes([144, 255, 0, 0]), bytes([167, 0, 0, 0])]
-        _OFF = [bytes([167, 0, 0, 0]), bytes([144, 0, 0, 0]), bytes([167, 0, 0, 0])] #last one might not be nessesary, but it looks better
+        #SWEEP = 0                      #GAIN = 0
+        _OFF = [bytes([167, 0, 0, 0]), bytes([144, 0, 0, 0])]
 
         if self._laser_on: 
             for packet in _OFF: 
@@ -182,7 +157,7 @@ class DBR_Spectrometer:
                 self._get_interpolation_type(start_message="Please Input Interpolation Type ('linear'/'curve_fit'): ")
             else: return self.interpolation_type
 
-    def _connect_to_laser(self):
+    def _connect_to_laser(self, target_port:str):
         if self._laser_connected: print(f"Laser is already connected to {self._laser_serial.name}")
         else:
             ports = serial.tools.list_ports.comports()
@@ -190,7 +165,7 @@ class DBR_Spectrometer:
                 print("{} : {} [{}]".format(port, desc, hwid))
 
             self._laser_serial = serial.Serial(
-                port = self._default_serial_port, 
+                port = "COM4", 
                 baudrate = 9600, 
                 bytesize = serial.EIGHTBITS,
                 parity = serial.PARITY_NONE, 
@@ -208,10 +183,10 @@ class DBR_Spectrometer:
 
     def _write_voltage(self):
         CWD = os.path.dirname(os.path.realpath(__file__))
-        if self.interpolate_type == "linear":
+        if self.interpolation_type == "linear":
             new_table_path = CWD+f'/Voltage_Data/INTERP_({self.interpolation_value}, {self.start_index}, {self.end_index}).csv'
 
-        if self.interpolate_type == "curve_fit":
+        if self.interpolation_type == "curve_fit":
             new_table_path = CWD+f'/Voltage_Data/EXTRAP_({self.interpolation_value}, {self.start_index}, {self.end_index}).csv'
 
         with open(new_table_path, 'w', newline='') as csvfile:
@@ -263,11 +238,10 @@ class DBR_Spectrometer:
             match status:
                 case 0x01:
                     status_message = "Command Executed, Response Data Valid: "
-                    print(status_message)
+                    tqdm.write(status_message)
                     gain_value = (value_msb << 8) | value_lsb
                     tqdm.write(f"{name} DAC reads as: {gain_value}")
-                    if self.log_voltage: self._voltage_data.append(self._read_voltage())
-
+                    
                 case 0x02: status_message = "Register not recognized. "
                 case 0x03: status_message = "Register is Read Only. "
                 case 0x04: status_message = "Command could not be executed. "
@@ -282,11 +256,12 @@ class DBR_Spectrometer:
         '''
         Sends Packets to Instatune Laser Module.
         '''
+        num_packets = len(DAC_list[0])
+        print(num_packets)
+
         if manual:
             if not helper.get_user_input(message="Scan over full Interpolated DAC table Y/N: ", input_type="y/n"):
                 num_packets = helper.get_user_input(message="Number of Wavelengths to scan over (int): ", input_type="int")
-
-        else: num_packets = len(DAC_list[0])
 
         if manual:
             automatic = helper.get_user_input(message="Scan automatically Y/N: ", input_type="y/n")
@@ -296,7 +271,7 @@ class DBR_Spectrometer:
 
         packets = self._make_packets_list(DAC_list)
 
-        for i in tqdm(range(num_packets)):
+        for i in tqdm(range(len(packets))):
             tqdm.write(f'Target: {packets[i][4]}')
             tqdm.write(f"FM:  {packets[i][0]}")
             tqdm.write(f"BM:  {packets[i][1]}")
@@ -314,11 +289,18 @@ class DBR_Spectrometer:
                 for j in range(4): 
                     self._laser_serial.write(packets[i][j])
                     self._read_response()
+
+                if self.log_voltage: 
+                    self._voltage_data.append(self._read_voltage())
+
             else: 
                 fake_response = bytes([0,0,0,1])
                 for j in range(4): 
-                    print(fake_response)
+                    tqdm.write(fake_response)
                     tqdm.write(f"Status: {1} = all good \n")
+
+                if self.log_voltage: 
+                    self._voltage_data.append(self._read_voltage())
             
     def _manual_setup(self):
         '''
@@ -334,30 +316,33 @@ class DBR_Spectrometer:
             rm = pyvisa.ResourceManager()
             print(rm.list_resources())
             #USB_address = "USB0::0x2A8D::0x1601::MY60077980::INSR"
-            USB_address = helper.get_user_input(message="Voltmeter USB Address: ", input_type="str")
-            self._voltmeter_inst = rm.open_resource(USB_address)
+            #USB_address = helper.get_user_input(message="Voltmeter USB Address: ", input_type="str")
+            self._voltmeter_inst = rm.open_resource("USB0::0x2A8D::0x1601::MY60077980::INSTR")
 
         self.start_index = helper.get_user_input(message="Start Index (int): ", input_type="int")
         self.end_index = helper.get_user_input(message="End Index (int): ", input_type="int")
         self.interpolation_type = self._get_interpolation_type(start_message="Interpolation Type ('linear'/'curve_fit'): ")
         self.interpolation_value = helper.get_user_input(message="Interpolation Value (int): ", input_type="int")
-        self.sanatize = helper.get_user_input(message="Sanatize Packets Y/N: ", input_type="y/n")
+        #self.sanatize = helper.get_user_input(message="Sanatize Packets Y/N: ", input_type="y/n")
         self.plot_choice = helper.get_user_input(message="Plot DAC values Y/N: ", input_type="y/n")
         self.plot_both = helper.get_user_input(message="Plot Original values also Y/N: ", input_type="y/n")
 
         if helper.get_user_input("Toggle Laser On Y/N: ", input_type="y/n"): self.enable()
 
-    def _read_voltage(self) -> list:
+    def _read_voltage(self) -> float:
         '''
         Measures voltage via connected Voltmeter
         '''
         try: self._voltmeter_inst
-        except NameError: print("No Voltmeter Instance Found")
+        except: 
+            print("No Voltmeter Instance Found")
+            rm = pyvisa.ResourceManager()
+            print(rm.list_resources())
+            self._voltmeter_inst = rm.open_resource("USB0::0x2A8D::0x1601::MY60077980::INSTR")
+            print(self._voltmeter_inst.query("*IDN?"))
         
-        print(self._voltmeter_inst.query("*IDN?"))
-        print(self._voltmeter_inst.query("MEAS:VOLT:DC? 0.100,0.001"))
-
-        return [self._voltmeter_inst.query("*IDN?"), self._voltmeter_inst.query("MEAS:VOLT:DC? 0.100,0.001")]
+        #print(self._voltmeter_inst.query("MEAS:VOLT:DC? 0.100,0.001"))
+        return float(self._voltmeter_inst.query("MEAS:VOLT:DC? 0.100,0.001"))
     
     def scan(self, mode="manual"):
         '''
@@ -366,6 +351,7 @@ class DBR_Spectrometer:
         Manual Setup via command line allows for sending individual packets one at a time. 
         '''
         if self._laser_on:
+            print("disabling laser")
             self.disable()
 
         self.mode = mode
@@ -401,8 +387,8 @@ class DBR_Spectrometer:
             path = DAC_Table.generate_DAC_table(plot_choice=self.plot_choice, plot_both=self.plot_both) #also plots if enabled
 
         DAC_list = DAC_Table.get_DAC_arrays(path)  #read values from new table
-        self._send_packets(DAC_list, manual=self.mode)
-
+        self._send_packets(DAC_list=DAC_list, manual=self.mode)
+        self._write_voltage()
         self._disconnect_from_laser()
             
 

@@ -91,10 +91,10 @@ class DAC_Table:
         fig, ax = plt.subplots()
         plt.gcf().set_size_inches(8,6)
 
-        ax.plot(self.new_wl, self.r_fm, 'o--', ms=0.85, linewidth=0.5, label=r"FM")
-        ax.plot(self.new_wl, self.r_bm, 'o--', ms=0.85, linewidth=0.5, label=r"BM")
-        ax.plot(self.new_wl, self.r_ph, 'o--', ms=0.85, linewidth=0.5, label=r"PH")
-        ax.plot(self.new_wl, self.r_soa, 'o--', ms=0.85, linewidth=0.5, label=r"SOA")
+        ax.plot(self.new_wl, self.r_fm, 'o--', ms=0.85, linewidth=0.5, label=f"FM")
+        ax.plot(self.new_wl, self.r_bm, 'o--', ms=0.85, linewidth=0.5, label=f"BM")
+        ax.plot(self.new_wl, self.r_ph, 'o--', ms=0.85, linewidth=0.5, label=f"PH")
+        ax.plot(self.new_wl, self.r_soa, 'o--', ms=0.85, linewidth=0.5, label=f"SOA")
 
         if not self.interpolate_value:
             plt.title(f'Default DAC Parameters ({self.start_index}, {self.end_index})')
@@ -107,13 +107,13 @@ class DAC_Table:
 
         if plot_both or not self.interpolate_value:
 
-            ax.plot(self.wl, self.fm, 'o--', ms=0.85, linewidth=0.5, label=r"FM")
-            ax.plot(self.wl, self.bm, 'o--', ms=0.85, linewidth=0.5, label=r"BM")
-            ax.plot(self.wl, self.ph, 'o--', ms=0.85, linewidth=0.5, label=r"PH")
-            ax.plot(self.wl, self.soa, 'o--', ms=0.85, linewidth=0.5, label=r"SOA")
+            ax.plot(self.wl, self.fm, 'o--', ms=0.85, linewidth=0.5, label=f"FM")
+            ax.plot(self.wl, self.bm, 'o--', ms=0.85, linewidth=0.5, label=f"BM")
+            ax.plot(self.wl, self.ph, 'o--', ms=0.85, linewidth=0.5, label=f"PH")
+            ax.plot(self.wl, self.soa, 'o--', ms=0.85, linewidth=0.5, label=f"SOA")
 
-        plt.xlabel(r'$\text{Wavelength} ( \lambda )$')
-        plt.ylabel(r"DAC Value")
+        plt.xlabel('Wavelength')
+        plt.ylabel("DAC Value")
         plt.legend()
 
         if self.interpolate_type == "linear":

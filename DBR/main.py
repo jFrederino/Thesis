@@ -3,13 +3,12 @@
 from DBR import DBR_Spectrometer
 
 laser = DBR_Spectrometer()
-laser.toggle()
-input("continue: ")
-laser.toggle()
-
+laser.enable()
+laser.disable()
 laser.scan(mode="manual")
 
 input("-------")
+
 laser2 = DBR_Spectrometer(
     mode = "auto",
     start_index = 3000, 
