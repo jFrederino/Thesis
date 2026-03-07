@@ -65,40 +65,41 @@ class DBR_Spectrometer:
             self.sending_packets = sending_packets
             self.sanatize = sanatize
             self.log_voltage = log_voltage
+
             self._voltage_data = []
             self._laser_on = False
             self._laser_connected = False
+            self._default_serial_port = "COM4"
 
-    def toggle(self): #I WIN !!!
+    def enable(self): 
         '''
-        Turns the laser output on if its off, and off if its on
-
-        '''
-        self._connect_to_laser("COM4")
-
+        Turns the laser output on. Connects to default Serial Port {self._default_serial_port} if not connected. Defaults to 1627.5 nm output.
 
         '''
-        SOURCE CODE DECOMPILED FROM GUI                                                 # commentary by me though
+        self._connect_to_laser(self._default_serial_port)
 
-        if (((Control)btnLaserEnableDisable).Text == "Enable Laser")                    # they check if its on or not by reading what the button on the gui says. not what the laser is doing. the button text.
-            {
-                ushort regData = 0;
-                hostComm.WriteRegister(39, regData);                                
-                ((Control)btnLaserEnableDisable).Text = "Disable Laser";
-                hostComm.WriteRegister(16, Convert.ToUInt16(40959));                    # thats just 255 in the second byte
-            regData = 3840;                                                             # thats just zero but fancy 
-                hostComm.WriteRegister(39, regData);                                    # gets split and bit shifted and becomes zeros
-            }
-            else
-            {
-                ((Control)btnLaserEnableDisable).Text = "Enable Laser";
-                ushort regData = 0;
-                hostComm.WriteRegister(39, regData);
-                hostComm.WriteRegister(16, Convert.ToUInt16(0));                        # it will never cease to baffle me that they write zero to the same register in different ways multiple times
-            }
-        }
-        '''
+        #These magic numbers are from the decompiled enable/disable code the GUI uses. Registers are undocumented in manual.
+
         _ON = [bytes([167, 0, 0, 0]), bytes([144, 255, 0, 0]), bytes([167, 0, 0, 0])]
+        #_OFF = [bytes([167, 0, 0, 0]), bytes([144, 0, 0, 0]), bytes([167, 0, 0, 0])] #last one might not be nessesary, but it looks better
+
+        if self._laser_on: print("laser is already on.")
+        else:
+            for packet in _ON: 
+                self._laser_serial.write(packet)
+                self._read_response()
+
+            self.set_laser_target(fm_val=11425, bm_val=4698, ph_val=17448, soa_val=24222)
+            self._laser_on = True
+
+    def disable(self): 
+        '''
+        Turns the laser output off. Does NOT disconnect from Serial Connection.
+
+        '''
+        self._connect_to_laser(self._default_serial_port)
+
+        #_ON = [bytes([167, 0, 0, 0]), bytes([144, 255, 0, 0]), bytes([167, 0, 0, 0])]
         _OFF = [bytes([167, 0, 0, 0]), bytes([144, 0, 0, 0]), bytes([167, 0, 0, 0])] #last one might not be nessesary, but it looks better
 
         if self._laser_on: 
@@ -106,49 +107,90 @@ class DBR_Spectrometer:
                 self._laser_serial.write(packet)
                 self._read_response()
             self._laser_on = False
-        else:
-            for packet in _ON: 
-                self._laser_serial.write(packet)
-                self._read_response()
-            self.set_laser_target(fm_val=11425, bm_val=4698, ph_val=17448, soa_val=24222)
-            self._laser_on = True
+
+        else: print("Laser is already off.")
+
+    def set_default_serial_port(self, port_name:str):
+        self._default_serial_port = port_name
+        print(f"Default Serial Port set to: {self._default_serial_port}")
+
+    def make_packet(self, DAC_type:str, value:int) -> bytes:
+        '''
+        Creates DAC packet (bytes object) that can be sent to the Laser immediately. Also sanatizes given values
+        '''
+        maximum = minimum = 0
+        match DAC_type:
+            case "FM": 
+                register = (0x13)|(1 << 7)
+                maximum = 57954
+                minimum = 668
+            case "BM": 
+                register = (0x12)|(1 << 7)
+                maximum =  43418
+                minimum = 982
+            case "PH":
+                register = (0x11)|(1 << 7)
+                maximum =  17448
+                minimum = 2496
+            case "SOA": 
+                register = (0x14)|(1 << 7)
+                maximum =  45527
+                minimum = 14319
+
+        if value > maximum: raise Exception(f"{DAC_type} value outside of acceptable range: {value} > {maximum}" )
+        if value < minimum: raise Exception(f"{DAC_type} DAC value outside of acceptable range: {value} < {minimum}" )
+
+        value_split_hex = helper.val_to_split_hex(value)
+        msb, lsb = value_split_hex[0], value_split_hex[1]
+        return bytes([register, msb, lsb, 0x00 ])
+    
+    def _make_packets_list(self, DAC_list:list[list]) -> list[list]:
+        '''
+        Given DAC LUT will produce list containing all cooresponding packets, bundled with Target Wavelengths.
+        '''
+        packets = []
+        for i in range(len(DAC_list[0])):
+            fm_packet = self.make_packet("FM", DAC_list[1][i])
+            bm_packet = self.make_packet("BM", DAC_list[2][i])
+            ph_packet = self.make_packet("PH", DAC_list[3][i])
+            soa_packet = self.make_packet("SOA", DAC_list[4][i])
+            target_wl = DAC_list[5][i]
+
+            packets.append([fm_packet, bm_packet, ph_packet, soa_packet, target_wl])
+
+        return packets
 
     def set_laser_target(self, fm_val:int, bm_val:int, ph_val:int, soa_val:int):
-        try: self._laser_serial
-        except: self._connect_to_laser("COM4")
+        '''
+        Will create and send packets to update laser output to wavelegnth cooresponding tp given DAC values.
+        '''
+        if not self._laser_connected: print("Laser not connected.")
+        else:
+            fm_packet = self.make_packet("FM", fm_val)
+            bm_packet = self.make_packet("BM", bm_val)
+            ph_packet = self.make_packet("PH", ph_val)
+            soa_packet = self.make_packet("SOA", soa_val)
+            packets = [fm_packet, bm_packet, ph_packet, soa_packet]
 
-        fm_hex = helper.val_to_split_hex(fm_val)
-        bm_hex = helper.val_to_split_hex(bm_val)
-        ph_hex = helper.val_to_split_hex(ph_val)
-        soa_hex = helper.val_to_split_hex(soa_val)
-
-        fm_packet =  bytes([(0x13)|(1 << 7), fm_hex[0], fm_hex[1], 0x00 ])
-        bm_packet =  bytes([(0x12)|(1 << 7), bm_hex[0], bm_hex[1], 0x00 ])
-        ph_packet =  bytes([(0x11)|(1 << 7), ph_hex[0], ph_hex[1], 0x00 ])
-        soa_packet =  bytes([(0x14)|(1 << 7), soa_hex[0], soa_hex[1], 0x00 ])
-
-        packets = [fm_packet, bm_packet, ph_packet, soa_packet]
-        for packet in packets:
-            self._laser_serial.write(packet)
-            self._read_response()
-           
+            for packet in packets:
+                self._laser_serial.write(packet)
+                self._read_response()
+            
     def _get_interpolation_type(self, start_message):
             self.interpolation_type = helper.get_user_input(message = start_message, input_type="str")
             if self.interpolation_type not in ["linear", "curve_fit"]:
                 self._get_interpolation_type(start_message="Please Input Interpolation Type ('linear'/'curve_fit'): ")
             else: return self.interpolation_type
 
-    def _connect_to_laser(self, target_port: str):
-        try: 
-            self._laser_serial
-            print("Laser already connected")
-        except:
+    def _connect_to_laser(self):
+        if self._laser_connected: print(f"Laser is already connected to {self._laser_serial.name}")
+        else:
             ports = serial.tools.list_ports.comports()
             for port, desc, hwid in sorted(ports):
                 print("{} : {} [{}]".format(port, desc, hwid))
 
             self._laser_serial = serial.Serial(
-                port = target_port, 
+                port = self._default_serial_port, 
                 baudrate = 9600, 
                 bytesize = serial.EIGHTBITS,
                 parity = serial.PARITY_NONE, 
@@ -156,6 +198,13 @@ class DBR_Spectrometer:
             
             print(f"Serial port {self._laser_serial.name} opened successfully.")
             self._laser_connected = True
+
+    def _disconnect_from_laser(self):
+        if not self._laser_connected: print("Laser is already disconnected. ")
+        print("Closing Serial Port...")
+        name = self._laser_serial.name
+        self._laser_serial.close()
+        print(f"Serial Port {name} Closed.")
 
     def _write_voltage(self):
         CWD = os.path.dirname(os.path.realpath(__file__))
@@ -172,71 +221,67 @@ class DBR_Spectrometer:
                 writer.writerow([row, self._voltage_data[row]])
 
     def _read_response(self):
-        response = self._laser_serial.read(4)
-        tqdm.write(f"Full Response: {response}")
+        if not self._laser_connected:
+            raise Exception("Laser not connected.")
+        else: 
+            response = self._laser_serial.read(4)
+            tqdm.write(f"Full Response: {response}")
 
-        reg = response[0]
-        value_msb = response[1]
-        value_lsb = response[2]
-        status = response[3]
+            reg = response[0]
+            value_msb = response[1]
+            value_lsb = response[2]
+            status = response[3]
 
-        name = "unknown"
-        match reg:
-            case 0x13: name = "FM"
-            case 0x12: name = "BM"
-            case 0x11: name = "PH"
-            case 0x14: name = "SOA"
-        
-        if status == 0x01:
-            gain_value = (value_msb << 8) | value_lsb
-            tqdm.write(f"{name} Current DAC = {gain_value}")
-            if self.log_voltage: 
-                self._voltage_data.append(self._read_voltage())
-        else:
-            print(f"Error: status code 0x{status:X}")
-            self._laser_serial.close()
-            sys.exit()
+            name = "Unknown"
+            match reg:
+                case 0x00: name = "Firmware Revision"
+                case 0x01: name = "Protocol Version"
+                case 0x02: name = "Product Identifier"
+                case 0x0A: name = "Reserved"
+                case 0x0B: name = "TEC Current" #32767 indicates 0 mA
+                case 0x0C: name = "Laser Temperature Set Point" #given in centi-Celsius
+                case 0x0D: name = "Laser Temperature Operating Point" #also given in centi-Celsius
+
+                #This seems to be a current that doesnt change as the laser sweeps through the LUT, so it should not affect wavelength, probably.
+                case 0x10: name = "GAIN Current DAC"
+                #These are the controller registers we actually write to.
+                case 0x13: name = "FM"
+                case 0x12: name = "BM"
+                case 0x11: name = "PH"
+                case 0x14: name = "SOA"
+
+                #These relate to the Laser's built in LUT Sweep functionality, which is currently not being used in this project.
+                case 0x1E: name = "LUT Prepare Write"
+                case 0x1F: name = "LUT Write Point" #automatically incremented after write
+                case 0x20: name = "LUT Start Index"
+                case 0x21: name = "LUT Length"
+                case 0x27: name = "Sweep Configuration"
+                case 0x28: name = "Step Sync Delay"
+                case 0x29: name = "Step Period"
+
+            status_message = "Unknown"
+            match status:
+                case 0x01:
+                    status_message = "Command Executed, Response Data Valid: "
+                    print(status_message)
+                    gain_value = (value_msb << 8) | value_lsb
+                    tqdm.write(f"{name} DAC reads as: {gain_value}")
+                    if self.log_voltage: self._voltage_data.append(self._read_voltage())
+
+                case 0x02: status_message = "Register not recognized. "
+                case 0x03: status_message = "Register is Read Only. "
+                case 0x04: status_message = "Command could not be executed. "
+                case 0x05: status_message = "Value out of range. "
+            if status != 0x01: 
+                print(f"Error: status code 0x{status:X}")
+                print(status_message)
+                self._laser_serial.close()
+                sys.exit()
                 
     def _send_packets(self, DAC_list: list[list], manual: bool = True):
         '''
         Sends Packets to Instatune Laser Module.
         '''
-        packets = []
-        for i in range(len(DAC_list[0])):
-            fm_val = DAC_list[1][i]
-            bm_val = DAC_list[2][i]
-            ph_val = DAC_list[3][i]
-            soa_val = DAC_list[4][i]
-            target_wl = DAC_list[5][i]
-
-            #   SANATIZE PACKETS HERE
-            if self.sanatize:
-                #as far as i am aware, the DAC values can be anywhere between 0 and 65535 according to the manual (the unsigned 16-bit integer limit) 
-                values = [fm_val, bm_val, ph_val, soa_val]
-                names = ["FM", "BM", "PH", "SOA"]
-                maximums = [57954, 43418, 17448, 45527] #max from LUT 0v0
-                minimums = [668, 982, 2496, 14319] #min from LUT 0v0
-            
-                for val in values:
-                    j = values.index(val) 
-                    if val > maximums[j]: raise Exception(f"{names[j]} DAC value outside of acceptable range: {val} > {maximums[j]}" )
-                    if val < minimums[j]: raise Exception(f"{names[j]} DAC value outside of acceptable range: {val} < {minimums[j]}" )
-        
-            fm_hex = helper.val_to_split_hex(fm_val)
-            bm_hex = helper.val_to_split_hex(bm_val)
-            ph_hex = helper.val_to_split_hex(ph_val)
-            soa_hex = helper.val_to_split_hex(soa_val)
- 
-            #also should check hex values here
-            fm_packet =  bytes([(0x13)|(1 << 7), fm_hex[0], fm_hex[1], 0x00 ])
-            bm_packet =  bytes([(0x12)|(1 << 7), bm_hex[0], bm_hex[1], 0x00 ])
-            ph_packet =  bytes([(0x11)|(1 << 7), ph_hex[0], ph_hex[1], 0x00 ])
-            soa_packet =  bytes([(0x14)|(1 << 7), soa_hex[0], soa_hex[1], 0x00 ])
-
-            packets.append([fm_packet, bm_packet, ph_packet, soa_packet, target_wl])
-
-        num_packets = len(DAC_list[0])
-
         if manual:
             if not helper.get_user_input(message="Scan over full Interpolated DAC table Y/N: ", input_type="y/n"):
                 num_packets = helper.get_user_input(message="Number of Wavelengths to scan over (int): ", input_type="int")
@@ -245,10 +290,11 @@ class DBR_Spectrometer:
 
         if manual:
             automatic = helper.get_user_input(message="Scan automatically Y/N: ", input_type="y/n")
-
-        if automatic: self.delay = helper.get_user_input(message="Input Delay between packets: ", input_type="float")
+            if automatic: self.delay = helper.get_user_input(message="Input Delay between packets: ", input_type="float")
 
         print(f"Preparing: {num_packets} Packets")
+
+        packets = self._make_packets_list(DAC_list)
 
         for i in tqdm(range(num_packets)):
             tqdm.write(f'Target: {packets[i][4]}')
@@ -259,10 +305,7 @@ class DBR_Spectrometer:
         
             if manual:
                 if not automatic and not helper.get_user_input("Proceed to Send Y/N: ", input_type="y/n"):
-                    tqdm.write("Closing Serial port...")
-                    self._laser_serial.close()
-                    tqdm.write("Serial port closed.")
-                    sys.exit()
+                    self._disconnect_from_laser()
             
             tqdm.write(f"waiting {self.delay} second(s)...")
             time.sleep(self.delay)
@@ -283,8 +326,8 @@ class DBR_Spectrometer:
         '''
         self.sending_packets = helper.get_user_input(message="Send Packets to Laser Y/N: ", input_type="y/n")
         if self.sending_packets: 
-            try: self._laser_serial
-            except: self._connect_to_laser(target_port = helper.get_user_input(message="Input Target Port: ", input_type="str"))
+            if not self._laser_connected: 
+                self._connect_to_laser(target_port = helper.get_user_input(message="Input Target Port: ", input_type="str"))
 
         self.log_voltage = helper.get_user_input("Log Voltage Y/N: ", input_type="y/n")
         if self.log_voltage: 
@@ -302,7 +345,7 @@ class DBR_Spectrometer:
         self.plot_choice = helper.get_user_input(message="Plot DAC values Y/N: ", input_type="y/n")
         self.plot_both = helper.get_user_input(message="Plot Original values also Y/N: ", input_type="y/n")
 
-        if helper.get_user_input("Toggle Laser On Y/N: ", input_type="y/n"): self.toggle()
+        if helper.get_user_input("Toggle Laser On Y/N: ", input_type="y/n"): self.enable()
 
     def _read_voltage(self) -> list:
         '''
@@ -322,21 +365,21 @@ class DBR_Spectrometer:
         Tables can be generated with interpolated or extrapolated values. 
         Manual Setup via command line allows for sending individual packets one at a time. 
         '''
+        if self._laser_on:
+            self.disable()
+
         self.mode = mode
 
-        if self.mode == "manual":
-            _manual = True
+        if self.mode == "manual": 
             self._manual_setup()
         elif self.mode == "auto":
-            _manual = False
             if self.sending_packets:
-                try: self._laser_serial
-                except: self._connect_to_laser(target_port = helper.get_user_input(message="Input Target Port: ", input_type="str"))
+                if not self._laser_connected: 
+                    self._connect_to_laser(target_port = helper.get_user_input(message="Input Target Port: ", input_type="str"))
+                if not self._laser_on: self.enable()
         else:
             raise Exception("Mode is neither 'manual' nor 'auto'. ")
         
-        if not self._laser_on: self.toggle()
-    
         CWD = os.path.dirname(os.path.realpath(__file__))
 
         if self.interpolation_type == "linear": 
@@ -358,12 +401,10 @@ class DBR_Spectrometer:
             path = DAC_Table.generate_DAC_table(plot_choice=self.plot_choice, plot_both=self.plot_both) #also plots if enabled
 
         DAC_list = DAC_Table.get_DAC_arrays(path)  #read values from new table
-        self._send_packets(DAC_list, manual=_manual)
+        self._send_packets(DAC_list, manual=self.mode)
 
-        if self.sending_packets: 
-            print("Closing Serial port...")
-            self._laser_serial.close()
-            print("Serial port closed.")
+        self._disconnect_from_laser()
+            
 
    
 
