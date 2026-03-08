@@ -8,8 +8,6 @@ import numpy as np
 dpg.create_context()
 
 
-
-
 running = False
 paused = False
 progress = 0
