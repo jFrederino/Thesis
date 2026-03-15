@@ -6,7 +6,7 @@ from DBR import DBR_Spectrometer
 import generate_table as table
 import numpy as np
 dpg.create_context()
-
+import sys
 
 running = False
 paused = False
@@ -95,14 +95,19 @@ def reset_callback():
 
 def generate_data(x):
     data_x, data_y = [], []
-    for y in range(0, 100000):
+    for y in range(0, 75000):
         data_x.append(x)
         data_y.append(y)
+
+    print(f"wl = {data_x[0]}")
+    logger.log(f"wl = {data_x[0]}")
     return data_x, data_y
 
 def update_plot():
     data_x, data_y = generate_data(dpg.get_value("slider"))
+
     dpg.configure_item('tracker', x=data_x, y=data_y)
+    
     #dpg.fit_axis_data("xaxis")
     #pg.fit_axis_data("yaxis")
 
@@ -117,6 +122,10 @@ def print_me(sender):
     print(f"Menu Item: {sender}")
     
 with dpg.window() as primary_window:
+    logger = dpg_logger.mvLogger()
+    sys.stdout = logger
+    logger.log("Welcome to the logger !")
+
     with dpg.menu_bar():
         with dpg.window(label="Window 01", width=300, height=200, pos=[300, 300]):
             textControl = dpg.add_text("Clicks: 0")
@@ -188,10 +197,7 @@ with dpg.window() as primary_window:
 
     dpg.add_slider_float(label="m", tag="slider", default_value=1600, min_value=1625, max_value=1675, callback=update_plot)
 
-    logger = dpg_logger.mvLogger()
-
-    logger.log("Welcome to the logger !")
-
+  
 
 
 

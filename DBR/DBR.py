@@ -28,7 +28,7 @@ class DBR_Spectrometer:
     '''
     def __init__(self, mode: str = "manual", start_index: int = 0, end_index: int = 9999, interpolation_type: str = "linear", 
         interpolation_value:int = 3, plot_choice: bool = False, plot_both: bool = False,
-        delay: float = 0.1, sending_packets: bool = True, sanatize: bool = True, log_voltage: bool = False):
+        delay: float = 0.1, sending_packets: bool = True, sanatize: bool = True, log_voltage: bool = False, gui:bool = False):
             self.mode = mode
             self.start_index = start_index
             self.end_index = end_index
@@ -40,6 +40,7 @@ class DBR_Spectrometer:
             self.sending_packets = sending_packets
             #self.sanatize = sanatize
             self.log_voltage = log_voltage
+            self.gui = gui
 
             self._voltage_data = []
             self._laser_on = False
@@ -344,6 +345,24 @@ class DBR_Spectrometer:
         #print(self._voltmeter_inst.query("MEAS:VOLT:DC? 0.100,0.001"))
         return float(self._voltmeter_inst.query("MEAS:VOLT:DC? 0.100,0.001"))
     
+    def get_table(self):
+        if self.interpolation_type == "linear": 
+            table_list = glob.glob(f'**/DAC_Tables/INTERP_{self.interpolation_type, self.start_index, self.end_index}.csv', recursive=True)
+
+        if self.interpolation_type == "curve_fit": 
+            table_list = glob.glob(f'**/DAC_Tables/EXTRAP_{self.interpolation_type, self.start_index, self.end_index}.csv', recursive=True)
+
+        if not table_list or self.plot_choice:
+
+            DAC_Table = table.DAC_Table(
+                interpolate_type=self.interpolation_type, interpolate_value=self.interpolation_value, 
+                start_index=self.start_index, end_index=self.end_index)
+        
+            path = DAC_Table.generate_DAC_table(plot_choice=self.plot_choice, plot_both=self.plot_both) #also plots if enabled
+        
+        DAC_list = DAC_Table.get_DAC_arrays(path)  #read values from new table
+        return DAC_list
+
     def scan(self, mode="manual"):
         '''
         DBR Spectrometer scans through wavelengths generated via DAC values. 
@@ -368,25 +387,8 @@ class DBR_Spectrometer:
         
         CWD = os.path.dirname(os.path.realpath(__file__))
 
-        if self.interpolation_type == "linear": 
-            table_list = glob.glob(f'**/DAC_Tables/INTERP_{self.interpolation_type, self.start_index, self.end_index}.csv', recursive=True)
+        DAC_list = self.get_table()  #read values from new table
 
-        if self.interpolation_type == "curve_fit": 
-            table_list = glob.glob(f'**/DAC_Tables/EXTRAP_{self.interpolation_type, self.start_index, self.end_index}.csv', recursive=True)
-    
-        if table_list:
-            path = table_list[0]
-            print(f"Table already exists! Fetching data from: {path}")
-
-        if not table_list or self.plot_choice:
-
-            DAC_Table = table.DAC_Table(
-                interpolate_type=self.interpolation_type, interpolate_value=self.interpolation_value, 
-                start_index=self.start_index, end_index=self.end_index)
-        
-            path = DAC_Table.generate_DAC_table(plot_choice=self.plot_choice, plot_both=self.plot_both) #also plots if enabled
-
-        DAC_list = DAC_Table.get_DAC_arrays(path)  #read values from new table
         self._send_packets(DAC_list=DAC_list, manual=self.mode)
         self._write_voltage()
         self._disconnect_from_laser()
