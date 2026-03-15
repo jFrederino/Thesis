@@ -1,7 +1,7 @@
 
 # TO-DO LIST 
 
-## Diagnose LUT dicontinuities 
+## Diagnose LUT discontinuities 
 The laser output currently jumps around even using the default LUT. This seems to happen at values a bit *before* the large discontinuties that appear periodically in the LUT. Watching the scan at a rate of about four packets per second (one WL target per second) suggested that there is a pattern of strange behavior every 100 DAC values or so.
 
 ## Clip extraneous points beyond LUT bounds off of curve_fit extrapolated DAC lists
