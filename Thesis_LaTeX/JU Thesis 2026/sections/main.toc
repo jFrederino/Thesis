@@ -1,0 +1,20 @@
+\contentsline {chapter}{\tocchapter {Chapter}{}{Acknowledgments}}{iii}{}%
+\contentsline {chapter}{\tocchapter {Chapter}{}{Introduction}}{iv}{}%
+\contentsline {section}{\tocsection {}{}{Methane and Climate Change}}{iv}{}%
+\contentsline {section}{\tocsection {}{}{Problems in Modeling Methane's Behavior}}{iv}{}%
+\contentsline {section}{\tocsection {}{}{Ro-Vibrational Transitions and HITRAN Data}}{iv}{}%
+\contentsline {chapter}{\tocchapter {Chapter}{1}{Theory}}{1}{}%
+\contentsline {section}{\tocsection {}{}{Laser Spectroscopy}}{1}{}%
+\contentsline {section}{\tocsection {}{}{Laser Mechanics}}{1}{}%
+\contentsline {section}{\tocsection {}{}{Distributed Bragg Reflector (DBR) Lasers}}{2}{}%
+\contentsline {chapter}{\tocchapter {Chapter}{2}{Method}}{3}{}%
+\contentsline {section}{\tocsection {}{}{Laser Functionality}}{4}{}%
+\contentsline {section}{\tocsection {}{}{Program Sequencing}}{4}{}%
+\contentsline {section}{\tocsection {}{}{Communication Protocol}}{5}{}%
+\contentsline {section}{\tocsection {}{}{Data Collection}}{5}{}%
+\contentsline {chapter}{\tocchapter {Chapter}{3}{Analysis}}{6}{}%
+\contentsline {section}{\tocsection {}{}{DAC LUT Discontinuities}}{6}{}%
+\contentsline {section}{\tocsection {}{}{Laser Precision}}{6}{}%
+\contentsline {section}{\tocsection {}{}{Spectroscopic Measurements}}{6}{}%
+\contentsline {chapter}{\tocchapter {\chaptername }{}{Appendix A}}{7}{}%
+\contentsline {chapter}{\tocchapter {\chaptername }{}{Bibliography}}{8}{}%
