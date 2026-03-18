@@ -7,9 +7,9 @@ dpg.create_context()
 
 Laser = DBR_Spectrometer(mode = "auto",
     start_index = 0, 
-    end_index = 500,
-    interpolation_type = "linear", 
-    interpolation_value = 0, 
+    end_index = 9999,
+    interpolation_type = "curve_fit", 
+    interpolation_value = 3, 
     plot_choice = False, 
     plot_both = False,
     delay = 1, 
@@ -21,7 +21,7 @@ DAC_list = Laser.get_table()
 
 
 with dpg.window() as primary_window:
-    logger = dpg_logger.mvLogger(parent=primary_window)
+    logger = dpg_logger.mvLogger()
     logger.log("Welcome to the logger !")
 
     with dpg.theme(tag="plot_theme"):
@@ -36,6 +36,23 @@ with dpg.window() as primary_window:
     DAC_tracker_value = 1626
    
     with dpg.plot(label="DAC", height=400, width=700):
+
+        DAC_type = 'FM'
+        maximum = minimum = 0
+        match DAC_type:
+            case "FM": 
+                maximum = 57954
+                minimum = 668
+            case "BM": 
+                maximum =  43418
+                minimum = 982
+            case "PH":
+                maximum =  17448
+                minimum = 2496
+            case "SOA": 
+                maximum =  45527
+                minimum = 14319
+
         dpg.add_plot_axis(dpg.mvXAxis, label="x", tag="xaxis")
         dpg.add_plot_axis(dpg.mvYAxis, label="y", tag="yaxis")
         wl= DAC_list[5]

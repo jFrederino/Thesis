@@ -25,6 +25,11 @@ class DAC_Table:
         self.interpolate_value = interpolate_value
         self.interpolate_type = interpolate_type
 
+        self.r_fm = []
+        self.r_bm = []
+        self.r_ph = []
+        self.r_soa = []
+
     def update_DAC_values(self, controllers: list[list]):
         self.idx = controllers[0]
         self.fm = controllers[1]
@@ -224,7 +229,7 @@ class DAC_Table:
         controllers = [self.fm, self.bm, self.ph, self.soa]
         controller_thresholds = [30,30,150,60] #tuned by trial and error, could use algorithm instead?
 
-        for j in range(len(controllers)-1): 
+        for j in range(len(controller_names)): 
             controller = controllers[j]
             controller_name = controller_names[j]
             controller_threshold = controller_thresholds[j]
@@ -240,6 +245,20 @@ class DAC_Table:
             r_values = []
             w_values = []
 
+            match controller_name:
+                case "FM": 
+                    maximum = 57954
+                    minimum = 668
+                case "BM": 
+                    maximum =  43418
+                    minimum = 982
+                case "PH":
+                    maximum =  17448
+                    minimum = 2496
+                case "SOA": 
+                    maximum =  45527
+                    minimum = 14319
+
             for i in range(discontinuities_controller_indices.size): 
 
                 if i != 0: 
@@ -254,7 +273,7 @@ class DAC_Table:
                     x = wl[:discontinuities_controller_indices[0]+1]
                     y = controller[:discontinuities_controller_indices[0]+1]
     
-                xfine = np.linspace(min(x), max(x)+(delta*res), len(x)*res + 1)
+                xfine = np.linspace(min(x), max(x)+(delta*res), len(x)*res + 1) #this is the finer resolution wavelength list
                 xfine = np.delete(xfine, -1) #get rid of overlaps
                 for wavelength in xfine: 
                     w_values.append(wavelength)
@@ -262,8 +281,17 @@ class DAC_Table:
                 if len(y) != 1:
                     popt, pcov = curve_fit(linear_function, x, y)
                     extrapolated_values = linear_function(xfine, *popt)
+                    prev = xfine[0] 
+
                     for value in extrapolated_values: 
-                        r_values.append(round(value))
+                        new = round(value)
+                        if new < minimum or new > maximum:
+                            #print(f"cutoff! {controller_name}: {new} is replaced with {prev}")
+                            r_values.append(prev)
+                            #prev stays the same
+                        else:
+                            r_values.append(new)
+                            prev = new
 
                 else: #you cant fit a curve to a single point lol (this bug caused such a headache)
                     extrapolated_values = [y[0]]
@@ -273,7 +301,7 @@ class DAC_Table:
 
                     for value in extrapolated_values: 
                         r_values.append(round(value))
-                
+
             if self.interpolate_value: self.new_wl = w_values
 
             match controller_name:

@@ -358,7 +358,7 @@ class DBR_Spectrometer:
                 interpolate_type=self.interpolation_type, interpolate_value=self.interpolation_value, 
                 start_index=self.start_index, end_index=self.end_index)
         
-            path = DAC_Table.generate_DAC_table(plot_choice=self.plot_choice, plot_both=self.plot_both) #also plots if enabled
+            path = DAC_Table.generate_DAC_table(interpolate_type=self.interpolation_type, plot_choice=self.plot_choice, plot_both=self.plot_both) #also plots if enabled
         
         DAC_list = DAC_Table.get_DAC_arrays(path)  #read values from new table
         return DAC_list

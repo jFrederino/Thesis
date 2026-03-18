@@ -3,7 +3,13 @@
 from DBR import DBR_Spectrometer
 
 laser = DBR_Spectrometer()
+<<<<<<< HEAD
 laser.enable()
+=======
+#laser.enable()
+#laser.disable()
+laser.scan(mode="manual")
+>>>>>>> 08c31ef (curve_fit now adheres to LUT boundaries)
 
 #laser.set_laser_target(10578, 4138, 9938, 22767)
 #laser.set_laser_target(10578, 4138, 9778, 22711)

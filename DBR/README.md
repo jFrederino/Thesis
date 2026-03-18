@@ -1,14 +1,20 @@
 
+# DONE AS OF 18 MAR 2026
+
+## Clipping extraneous points beyond LUT bounds off of curve_fit extrapolated DAC lists
+Curve_fit algorithm is now safe and adheres to LUT boundaries. 
+
+## fixed LUT discontinuities (jumping)
+Split Hex function in helper.py was using string splitting incorrectly, for some values like 4011, the hex is 0xfab (not 0x0fab), which is not four characters long in pythons representation. This was splitting 4011 into 0xfa, 0xb (interpreted by laser as 64011) instead of the correct 0xf, 0xab (4011). this has been replaced with the divmod method that uses modular division to split the hex values correctly. 
+
+
 # TO-DO LIST 
-
-## Diagnose LUT discontinuities 
-The laser output currently jumps around even using the default LUT. This seems to happen at values a bit *before* the large discontinuties that appear periodically in the LUT. Watching the scan at a rate of about four packets per second (one WL target per second) suggested that there is a pattern of strange behavior every 100 DAC values or so.
-
-## Clip extraneous points beyond LUT bounds off of curve_fit extrapolated DAC lists
-The current curve_fit method generates DAC values slightly beyond the lower bounds of the default LUT, these can be substituted with maintaining the minimum value instead. This is less important now concidering the default LUT might be flawed.
 
 ## Command Line argument control
 The program should accept parameter controls via in-line command line arguements: one command to run the program in its entirety.
+
+## Characterization of Laser spectrum
+Using the 'glorified block of glass' (destructive interferance precision wavemeter thing).
 
 ## GUI Side Quest
 
