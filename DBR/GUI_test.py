@@ -33,7 +33,7 @@ def run_task():
     global progress
     print("Running...")
     
-    points = np.linspace(1627.5, 1672.4955, 10000)
+    points = np.linspace(0, 10000, 10000)
     for i in points:
 
         while paused:
@@ -123,7 +123,6 @@ def print_me(sender):
     
 with dpg.window() as primary_window:
     logger = dpg_logger.mvLogger()
-    sys.stdout = logger
     logger.log("Welcome to the logger !")
 
     with dpg.menu_bar():
@@ -175,16 +174,16 @@ with dpg.window() as primary_window:
 
         dpg.add_plot_axis(dpg.mvYAxis, label="y", tag="yaxis")
         #dpg.set_axis_limits(dpg.last_item(), 0, 60000)
-
+        idx = DAC_list[0]
         wl= DAC_list[5]
         fm = DAC_list[1]
         bm = DAC_list[2]
         ph = DAC_list[3]
         soa = DAC_list[4]
-        dpg.add_line_series(wl, fm, label="FM", parent="yaxis", tag="data")
-        dpg.add_line_series(wl, bm, label="BM", parent="yaxis", tag="data2")
-        dpg.add_line_series(wl, ph, label="PH", parent="yaxis", tag="data3")
-        dpg.add_line_series(wl, soa, label="SOA", parent="yaxis", tag="data4")
+        dpg.add_line_series(idx, fm, label="FM", parent="yaxis", tag="data")
+        dpg.add_line_series(idx, bm, label="BM", parent="yaxis", tag="data2")
+        dpg.add_line_series(idx, ph, label="PH", parent="yaxis", tag="data3")
+        dpg.add_line_series(idx, soa, label="SOA", parent="yaxis", tag="data4")
 
         data_x, data_y = generate_data(DAC_tracker_value)
         dpg.add_line_series(data_x, data_y, parent="yaxis", tag="tracker")
@@ -195,7 +194,7 @@ with dpg.window() as primary_window:
         dpg.bind_item_theme("data4", "plot_theme")
         dpg.bind_item_theme("tracker", "tracker_theme")
 
-    dpg.add_slider_float(label="m", tag="slider", default_value=1600, min_value=1625, max_value=1675, callback=update_plot)
+    dpg.add_slider_float(label="m", tag="slider", default_value=0, min_value=0, max_value=10000, callback=update_plot)
 
   
 

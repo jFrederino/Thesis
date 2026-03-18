@@ -116,9 +116,9 @@ class DBR_Spectrometer:
         if value > maximum: raise Exception(f"{DAC_type} value outside of acceptable range: {value} > {maximum}" )
         if value < minimum: raise Exception(f"{DAC_type} DAC value outside of acceptable range: {value} < {minimum}" )
 
-        value_split_hex = helper.val_to_split_hex(value)
-        msb, lsb = value_split_hex[0], value_split_hex[1]
-        return bytes([register, msb, lsb, 0x00 ])
+        msb, lsb = helper.val_to_split_hex(value)
+
+        return bytes([register, int(msb, 16), int(lsb, 16), 0x00])
     
     def _make_packets_list(self, DAC_list:list[list]) -> list[list]:
         '''

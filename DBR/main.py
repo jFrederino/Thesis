@@ -4,11 +4,13 @@ from DBR import DBR_Spectrometer
 
 laser = DBR_Spectrometer()
 laser.enable()
-input("continue")
-laser.disable()
-input("continue")
-laser.scan(mode="manual")
 
+#laser.set_laser_target(10578, 4138, 9938, 22767)
+#laser.set_laser_target(10578, 4138, 9778, 22711)
+#laser.set_laser_target(10372, 4011, 10242, 22870)
+
+laser.scan(mode="manual")
+'''
 input("-------")
 
 laser2 = DBR_Spectrometer(
@@ -29,3 +31,4 @@ input("to continue enter anything: ")
 laser2.scan()
 
 #dbr.laser_auto_scan(LOG_VOLTAGE = True)a
+'''

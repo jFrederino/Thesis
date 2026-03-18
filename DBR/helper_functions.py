@@ -1,6 +1,7 @@
 # JAMES USHER 2026
 
 import fastnumbers 
+import ctypes
 
 def get_user_input(message:str, input_type:str):
     '''
@@ -54,19 +55,36 @@ def get_user_input(message:str, input_type:str):
         print(f"ERROR please input: {input_type}")
         return get_user_input(message, input_type)
 
+
+
+
+
+
+
 def val_to_split_hex(val): 
-        '''
-        Parameters
-        ----------
-        val : int 
+    '''
+    Parameters
+    ----------
+    val : int 
 
-        Returns
-        -------
-        [msb, lsb] : list of base-16 integers
-        '''
-        msb = int(hex(val)[2:4], base=16)
-        lsb = int(hex(val)[4:6], base=16)
-        #bytes() object doesnt take strings
-        
-        return [msb, lsb]
+    Returns
+    -------
+    (msb, lsb) : tuple of hex values (str)
+    '''
+    #old_msb = int(hex(val)[2:4], base=16)
+    #old_lsb = int(hex(val)[4:6], base=16)
+    #bytes() object doesnt take strings
+    #print(f'old: {hex(old_msb)}, {hex(old_lsb)}')
+    
+    #print(hex(val)) #4011 -> 0xfab
+    msb, lsb = divmod(val, 0x100)
 
+    return (hex(msb), hex(lsb))
+
+'''
+print(val_to_split_hex(4011))
+msb, lsb = val_to_split_hex(4011)
+
+p = bytes([(0x13)|(1 << 7), int(msb, 16), int(lsb, 16), 0x00])
+print(p)
+'''
