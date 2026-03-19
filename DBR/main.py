@@ -1,21 +1,13 @@
 # JAMES USHER 2026
 
 from DBR import DBR_Spectrometer
+from GUI import GUI
 
-laser = DBR_Spectrometer()
-<<<<<<< HEAD
-laser.enable()
-=======
-#laser.enable()
-#laser.disable()
-laser.scan(mode="manual")
->>>>>>> 08c31ef (curve_fit now adheres to LUT boundaries)
 
-#laser.set_laser_target(10578, 4138, 9938, 22767)
-#laser.set_laser_target(10578, 4138, 9778, 22711)
-#laser.set_laser_target(10372, 4011, 10242, 22870)
+GUI_Main = GUI(debug=True)
 
-laser.scan(mode="manual")
+GUI_Main.start_window()
+
 '''
 input("-------")
 

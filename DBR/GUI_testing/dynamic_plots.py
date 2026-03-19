@@ -29,7 +29,7 @@ with dpg.window(pos=(10,10)):
     dpg.add_slider_float(label="c", tag="c_slider", default_value=C, min_value=-50, max_value=50, callback=update_plot)
     dpg.add_checkbox(label="Auto-fit axis limits", tag="auto_fit_checkbox", default_value=False)
 
-dpg.create_viewport(width=900, height=600, title='Updating plot data')
+dpg.create_viewport(width=1000, height=800, title='Updating plot data')
 dpg.setup_dearpygui()
 dpg.show_viewport()
 dpg.start_dearpygui()

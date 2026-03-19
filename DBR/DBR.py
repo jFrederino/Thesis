@@ -42,7 +42,7 @@ class DBR_Spectrometer:
             self.log_voltage = log_voltage
             self.gui = gui
 
-            self._voltage_data = []
+            self.voltage_data = []
             self._laser_on = False
             self._laser_connected = False
             self._default_serial_port = "COM4"
@@ -120,7 +120,7 @@ class DBR_Spectrometer:
 
         return bytes([register, int(msb, 16), int(lsb, 16), 0x00])
     
-    def _make_packets_list(self, DAC_list:list[list]) -> list[list]:
+    def make_packets_list(self, DAC_list:list[list]) -> list[list]:
         '''
         Given DAC LUT will produce list containing all cooresponding packets, bundled with Target Wavelengths.
         '''
@@ -150,15 +150,22 @@ class DBR_Spectrometer:
 
             for packet in packets:
                 self._laser_serial.write(packet)
-                self._read_response()
-            
+                self.read_response()
+
+    def set_laser_target_via_packets(self, fm_packet, bm_packet, ph_packet, soa_packet):
+        if not self._laser_connected: print("Laser not connected.")
+        else:
+            packets = [fm_packet, bm_packet, ph_packet, soa_packet]
+            for packet in packets:
+                self._laser_serial.write(packet)
+
     def _get_interpolation_type(self, start_message):
             self.interpolation_type = helper.get_user_input(message = start_message, input_type="str")
             if self.interpolation_type not in ["linear", "curve_fit"]:
                 self._get_interpolation_type(start_message="Please Input Interpolation Type ('linear'/'curve_fit'): ")
             else: return self.interpolation_type
 
-    def _connect_to_laser(self, target_port:str):
+    def connect_to_laser(self, target_port:str):
         if self._laser_connected: print(f"Laser is already connected to {self._laser_serial.name}")
         else:
             ports = serial.tools.list_ports.comports()
@@ -175,14 +182,14 @@ class DBR_Spectrometer:
             print(f"Serial port {self._laser_serial.name} opened successfully.")
             self._laser_connected = True
 
-    def _disconnect_from_laser(self):
+    def disconnect_from_laser(self):
         if not self._laser_connected: print("Laser is already disconnected. ")
         print("Closing Serial Port...")
         name = self._laser_serial.name
         self._laser_serial.close()
         print(f"Serial Port {name} Closed.")
 
-    def _write_voltage(self):
+    def write_voltage(self):
         CWD = os.path.dirname(os.path.realpath(__file__))
         if self.interpolation_type == "linear":
             new_table_path = CWD+f'/Voltage_Data/INTERP_({self.interpolation_value}, {self.start_index}, {self.end_index}).csv'
@@ -193,10 +200,10 @@ class DBR_Spectrometer:
         with open(new_table_path, 'w', newline='') as csvfile:
             writer = csv.writer(csvfile, delimiter=',', quotechar='|')
             writer.writerow(['IDX','Voltage'])
-            for row in range(0, len(self._voltage_data)):
-                writer.writerow([row, self._voltage_data[row]])
+            for row in range(0, len(self.voltage_data)):
+                writer.writerow([row, self.voltage_data[row]])
 
-    def _read_response(self):
+    def read_response(self):
         if not self._laser_connected:
             raise Exception("Laser not connected.")
         else: 
@@ -251,9 +258,11 @@ class DBR_Spectrometer:
                 print(f"Error: status code 0x{status:X}")
                 print(status_message)
                 self._laser_serial.close()
-                sys.exit()
+                #sys.exit()
+
+        return name, status, status_message, gain_value
                 
-    def _send_packets(self, DAC_list: list[list], manual: bool = True):
+    def send_packets(self, DAC_list: list[list], manual: bool = True):
         '''
         Sends Packets to Instatune Laser Module.
         '''
@@ -270,7 +279,7 @@ class DBR_Spectrometer:
 
         print(f"Preparing: {num_packets} Packets")
 
-        packets = self._make_packets_list(DAC_list)
+        packets = self.make_packets_list(DAC_list)
 
         for i in tqdm(range(len(packets))):
             tqdm.write(f'Target: {packets[i][4]}')
@@ -281,7 +290,7 @@ class DBR_Spectrometer:
         
             if manual:
                 if not automatic and not helper.get_user_input("Proceed to Send Y/N: ", input_type="y/n"):
-                    self._disconnect_from_laser()
+                    self.disconnect_from_laser()
             
             tqdm.write(f"waiting {self.delay} second(s)...")
             time.sleep(self.delay)
@@ -289,10 +298,10 @@ class DBR_Spectrometer:
             if self.sending_packets: 
                 for j in range(4): 
                     self._laser_serial.write(packets[i][j])
-                    self._read_response()
+                    self.read_response()
 
                 if self.log_voltage: 
-                    self._voltage_data.append(self._read_voltage())
+                    self.voltage_data.append(self.read_voltage())
 
             else: 
                 fake_response = bytes([0,0,0,1])
@@ -301,7 +310,7 @@ class DBR_Spectrometer:
                     tqdm.write(f"Status: {1} = all good \n")
 
                 if self.log_voltage: 
-                    self._voltage_data.append(self._read_voltage())
+                    self.voltage_data.append(self.read_voltage())
             
     def _manual_setup(self):
         '''
@@ -310,7 +319,7 @@ class DBR_Spectrometer:
         self.sending_packets = helper.get_user_input(message="Send Packets to Laser Y/N: ", input_type="y/n")
         if self.sending_packets: 
             if not self._laser_connected: 
-                self._connect_to_laser(target_port = helper.get_user_input(message="Input Target Port: ", input_type="str"))
+                self.connect_to_laser(target_port = helper.get_user_input(message="Input Target Port: ", input_type="str"))
 
         self.log_voltage = helper.get_user_input("Log Voltage Y/N: ", input_type="y/n")
         if self.log_voltage: 
@@ -330,7 +339,7 @@ class DBR_Spectrometer:
 
         if helper.get_user_input("Toggle Laser On Y/N: ", input_type="y/n"): self.enable()
 
-    def _read_voltage(self) -> float:
+    def read_voltage(self) -> float:
         '''
         Measures voltage via connected Voltmeter
         '''
@@ -380,7 +389,7 @@ class DBR_Spectrometer:
         elif self.mode == "auto":
             if self.sending_packets:
                 if not self._laser_connected: 
-                    self._connect_to_laser(target_port = helper.get_user_input(message="Input Target Port: ", input_type="str"))
+                    self.connect_to_laser(target_port = helper.get_user_input(message="Input Target Port: ", input_type="str"))
                 if not self._laser_on: self.enable()
         else:
             raise Exception("Mode is neither 'manual' nor 'auto'. ")
@@ -389,9 +398,9 @@ class DBR_Spectrometer:
 
         DAC_list = self.get_table()  #read values from new table
 
-        self._send_packets(DAC_list=DAC_list, manual=self.mode)
-        self._write_voltage()
-        self._disconnect_from_laser()
+        self.send_packets(DAC_list=DAC_list, manual=self.mode)
+        self.write_voltage()
+        self.disconnect_from_laser()
             
 
    

@@ -14,4 +14,6 @@ if __name__ == "__main__":
         if keyboard.is_pressed('q'):
             process.terminate()
             break
+        if keyboard.is_pressed('p'):
+            pass
 

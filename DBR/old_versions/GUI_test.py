@@ -169,10 +169,10 @@ with dpg.window() as primary_window:
    
     with dpg.plot(label="DAC", height=400, width=700):
 
-        dpg.add_plot_axis(dpg.mvXAxis, label="x", tag="xaxis")
+        dpg.add_plot_axis(dpg.mvXAxis, label="Wavelength", tag="xaxis")
         #dpg.set_axis_limits(dpg.last_item(), 1625, 1675)
 
-        dpg.add_plot_axis(dpg.mvYAxis, label="y", tag="yaxis")
+        dpg.add_plot_axis(dpg.mvYAxis, label="Controller Value", tag="yaxis")
         #dpg.set_axis_limits(dpg.last_item(), 0, 60000)
         idx = DAC_list[0]
         wl= DAC_list[5]

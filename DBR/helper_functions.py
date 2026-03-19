@@ -55,12 +55,6 @@ def get_user_input(message:str, input_type:str):
         print(f"ERROR please input: {input_type}")
         return get_user_input(message, input_type)
 
-
-
-
-
-
-
 def val_to_split_hex(val): 
     '''
     Parameters
