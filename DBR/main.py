@@ -4,7 +4,9 @@ from DBR import DBR_Spectrometer
 from GUI import GUI
 
 
-GUI_Main = GUI(debug=True)
+#GUI_Main = GUI(debug=True)
+
+GUI_Main = GUI()
 
 GUI_Main.start_window()
 

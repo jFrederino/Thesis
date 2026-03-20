@@ -52,7 +52,7 @@ class DBR_Spectrometer:
         Turns the laser output on. Connects to default Serial Port {self._default_serial_port} if not connected. Defaults to 1627.5 nm output.
 
         '''
-        self._connect_to_laser(self._default_serial_port)
+        self.connect_to_laser(self._default_serial_port)
 
         #These magic numbers are from the decompiled enable/disable code the GUI uses. Registers are undocumented in manual.
         #SWEEP = 0                      #GAIN = 255
@@ -63,7 +63,7 @@ class DBR_Spectrometer:
         else:
             for packet in _ON: 
                 self._laser_serial.write(packet)
-                self._read_response()
+                self.read_response()
 
             self.set_laser_target(fm_val=11425, bm_val=4698, ph_val=17448, soa_val=24222)
             self._laser_on = True
@@ -73,7 +73,7 @@ class DBR_Spectrometer:
         Turns the laser output off. Does NOT disconnect from Serial Connection.
 
         '''
-        self._connect_to_laser(self._default_serial_port)
+        self.connect_to_laser(self._default_serial_port)
 
         #SWEEP = 0                      #GAIN = 0
         _OFF = [bytes([167, 0, 0, 0]), bytes([144, 0, 0, 0])]
@@ -81,7 +81,7 @@ class DBR_Spectrometer:
         if self._laser_on: 
             for packet in _OFF: 
                 self._laser_serial.write(packet)
-                self._read_response()
+                self.read_response()
             self._laser_on = False
 
         else: print("Laser is already off.")

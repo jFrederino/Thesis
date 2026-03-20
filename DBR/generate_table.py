@@ -207,19 +207,6 @@ class DAC_Table:
         #https://stackoverflow.com/a/48507056
         #https://www.eg.bucknell.edu/~phys310/jupyter/linear_fit_example_2.html
 
-        '''
-        -- from the manual -- 
-        DAC GUI
-
-        "The Laser Drive Portion of the GUI allows the user to
-        drive each laser section manually. Full scale on each
-        current source is 65535." 
-
-        I take this to mean that the DAC current/voltage control values are allowed to be anywhere in that range:
-        0 to 65535. That would mean that extending the edges like this is perfectly fine. 
-        this is the maxmimum unsigned 16 bit int, which makes sense
-
-        '''
         res = self.interpolate_value+1
         delta = 0.004499549999999999 / res
         new_fm,new_bm,new_ph,new_soa,new_wl  = [],[],[],[],[]

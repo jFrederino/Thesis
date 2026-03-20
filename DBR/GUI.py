@@ -22,7 +22,9 @@ class GUI:
         self.log_voltage = False
         self.DAC_list = [[],[],[],[],[],[]]
 
-
+        self.SCREEN_HEIGHT = 480    
+        self.SCREEN_WIDTH = 854
+        self.window_buffer_size = 8
         dpg.create_context()
         
     def setup(self):
@@ -93,8 +95,15 @@ class GUI:
 
 
     def update_plot(self):
+        
         idx, wl, fm, bm, ph, soa = self.DAC_list[0], self.DAC_list[5], self.DAC_list[1], self.DAC_list[2], self.DAC_list[3], self.DAC_list[4]
         if idx:
+            try: 
+                children = dpg.get_item_children(self.DAC_plot, 1)
+                #print(axes)
+                for child in children: dpg.delete_item(child, children_only=True, slot=1)
+            except: pass
+            
             dpg.add_line_series(wl, fm, label="FM", parent="yaxis", tag="data")
             dpg.add_line_series(wl, bm, label="BM", parent="yaxis", tag="data2")
             dpg.add_line_series(wl, ph, label="PH", parent="yaxis", tag="data3")
@@ -123,20 +132,47 @@ class GUI:
         data_x, data_y = self.generate_data(self.scan_tracker)
         #print(data_x[0])
         dpg.configure_item('tracker', x=data_x, y=data_y)
-        
+
+    def update_delay(self, sender, data):
+        self.delay = data
+        self.logger.log(f"Delay: {self.delay}")
+
+    def update_start_index(self, sender, data:str):
+        if data.isdigit():
+            self.start_index = int(data)
+            self.logger.log(f"Start Index = {data}")
+        else: self.logger.log_error(f"Start Index: {data} is non integer.")
+
+    def update_end_index(self, sender, data:str):
+        if data.isdigit():
+            self.end_index = int(data)
+            self.logger.log(f"End Index = {data}")
+        else: self.logger.log_error(f"End Index: {data} is non integer.")
+
+
+
+
+
+
     def start_window(self):
+        monitors = []
+        for monitor in screeninfo.get_monitors(): monitors.append(monitor)
 
-        for monitor in screeninfo.get_monitors():
-            width = monitor.width
-            height = monitor.height
+        monitor = monitors[0]
+        self.SCREEN_WIDTH = monitor.width
+        self.SCREEN_HEIGHT = monitor.height - 50
 
-            print(str(width) + 'x' + str(height))
+        #print(str(self.SCREEN_WIDTH) + 'x' + str(self.SCREEN_HEIGHT))
 
         def open_logger():
-            with dpg.window(label="Logger", pos=(932,32), height=800, width=600) as logger_window:
+            with dpg.window(
+                label="Logger", pos=(932,32), 
+                height= self.SCREEN_HEIGHT-(self.window_buffer_size*10), width= 500
+                ) as logger_window:
+
                 self.logger = dpg_logger.mvLogger(parent=logger_window)
 
-        dpg.create_viewport(x_pos=0, y_pos=0, width=1710, height=1107, title="Laser Control")
+        dpg.create_viewport(x_pos=0, y_pos=0, width=self.SCREEN_WIDTH, height=self.SCREEN_HEIGHT, title="Laser Control")
         
         open_logger()
 
@@ -179,9 +215,10 @@ class GUI:
             with dpg.theme(tag="tracker_theme"):
                 with dpg.theme_component(dpg.mvLineSeries):
                     dpg.add_theme_style(dpg.mvPlotStyleVar_LineWeight, 3, category=dpg.mvThemeCat_Plots)
-
-            with dpg.window(label="DAC Plot", pos=(216,32), height=440, width=1372) as plot_window:
-                with dpg.plot(label="DAC Values", parent=plot_window,  height=400, width=1364):
+            plot_width = self.SCREEN_WIDTH-240
+            plot_height = self.SCREEN_HEIGHT/2 - 2*self.window_buffer_size
+            with dpg.window(label="DAC Plot", pos=(216,32), height= plot_height, width=plot_width) as plot_window:
+                with dpg.plot(label="DAC Values", parent=plot_window,  height=plot_height-40, width=plot_width-24) as self.DAC_plot:
                     dpg.add_plot_legend(show=True, location=9)
                     dpg.add_plot_axis(dpg.mvXAxis, label="Wavelength", tag="xaxis")
                     dpg.add_plot_axis(dpg.mvYAxis, label="Controller Value", tag="yaxis")
@@ -195,10 +232,10 @@ class GUI:
                  with dpg.menu(label="Tools"):
                     dpg.add_menu_item(label="Logger", callback=open_logger)
             dpg.set_primary_window(primary_window, True)
-
+            show_plot()
             config_width = 200
 
-            with dpg.window(label="Config", pos=(8,32), height=800, width=config_width) as laser_config_window:
+            with dpg.window(label="Config", pos=(8,32), height=self.SCREEN_HEIGHT-self.window_buffer_size*10, width=config_width) as laser_config_window:
 
                 enable_laser_button = dpg.add_button(label="Enable Laser", width=config_width-16, callback=self.enable_laser)
                 disable_laser_button = dpg.add_button(label="Disable Laser", width=config_width-16, callback=self.disable_laser)
@@ -212,7 +249,11 @@ class GUI:
                 update_plot_buttom = dpg.add_button(label="Update Plot", width = config_width-16, callback=self.update_plot)
                 dpg.add_separator()
                 interpolation_type_input = dpg.add_combo(("Linear", "Curve Fit"))
-
+                dpg.add_text("Delay")
+                packet_delay_input = dpg.add_slider_float(min_value=0, max_value=1, width=config_width-16, callback=self.update_delay)
+                start_index_input = dpg.add_input_text(label="Start Index", width=config_width/2, callback=self.update_start_index)
+                end_index_input = dpg.add_input_text(label="End Index", width=config_width/2, callback=self.update_end_index)
+                
 
 
 
