@@ -1,21 +1,14 @@
 import time, threading, dearpygui.dearpygui as dpg, dearpygui_ext.logger as dpg_logger, numpy as np
 from DBR import DBR_Spectrometer
 import generate_table as table
-import subprocess
 import sys
-from math import sin, cos
+import screeninfo
 
 class GUI:
     def __init__(self, debug: bool = False):
         self.debug = debug
 
-        self.fm_input = 0
-        self.bm_input = 0
-        self.ph_input = 0
-        self.soa_input = 0
-
         self.scan_tracker = 1627.5 #x value of scan tracker line on DAC plot, and table index.
-
         self.scan_running = False
         self.scan_paused = False
 
@@ -27,8 +20,9 @@ class GUI:
         self.delay = 1
         self.sending_packets = True
         self.log_voltage = False
+        self.DAC_list = [[],[],[],[],[],[]]
 
-        self.DAC_list = [[0],[0],[0],[0],[0],[0]]
+
         dpg.create_context()
         
     def setup(self):
@@ -47,6 +41,7 @@ class GUI:
 
         self.logger.log("Laser Setup Updated")
         self.DAC_list = self.Laser.get_table()
+
         self.logger.log("DAC Table Updated")
 
     def enable_laser(self):
@@ -76,7 +71,7 @@ class GUI:
 
                 for packet in packets[i]:
                     self.scan_tracker = target_wl
-                    self.update_plot()
+                    self.update_tracker()
                     if self.debug:
                         #self.Laser.set_laser_target(fm, bm, ph, soa)
                     
@@ -96,6 +91,27 @@ class GUI:
                 if self.Laser.log_voltage: 
                     self.Laser.voltage_data.append(self.Laser.read_voltage())
 
+
+    def update_plot(self):
+        idx, wl, fm, bm, ph, soa = self.DAC_list[0], self.DAC_list[5], self.DAC_list[1], self.DAC_list[2], self.DAC_list[3], self.DAC_list[4]
+        if idx:
+            dpg.add_line_series(wl, fm, label="FM", parent="yaxis", tag="data")
+            dpg.add_line_series(wl, bm, label="BM", parent="yaxis", tag="data2")
+            dpg.add_line_series(wl, ph, label="PH", parent="yaxis", tag="data3")
+            dpg.add_line_series(wl, soa, label="SOA", parent="yaxis", tag="data4")
+
+            data_x, data_y = self.generate_data(self.scan_tracker)
+            dpg.add_line_series(data_x, data_y, parent="yaxis", tag="tracker")
+
+            dpg.bind_item_theme("data", "plot_theme")
+            dpg.bind_item_theme("data2", "plot_theme")
+            dpg.bind_item_theme("data3", "plot_theme")
+            dpg.bind_item_theme("data4", "plot_theme")
+            dpg.bind_item_theme("tracker", "tracker_theme")
+
+            dpg.set_axis_limits_auto(axis='xaxis')
+            dpg.set_axis_limits_auto(axis='yaxis')
+
     def generate_data(self, x):
         data_x, data_y = [], []
         for y in range(0, 75000):
@@ -103,18 +119,25 @@ class GUI:
             data_y.append(y)
         return data_x, data_y
 
-    def update_plot(self):
+    def update_tracker(self):
         data_x, data_y = self.generate_data(self.scan_tracker)
         #print(data_x[0])
         dpg.configure_item('tracker', x=data_x, y=data_y)
         
     def start_window(self):
 
+        for monitor in screeninfo.get_monitors():
+            width = monitor.width
+            height = monitor.height
+
+            print(str(width) + 'x' + str(height))
+
         def open_logger():
             with dpg.window(label="Logger", pos=(932,32), height=800, width=600) as logger_window:
                 self.logger = dpg_logger.mvLogger(parent=logger_window)
 
-        dpg.create_viewport(width=1600, height=900, title="Laser Control")
+        dpg.create_viewport(x_pos=0, y_pos=0, width=1710, height=1107, title="Laser Control")
+        
         open_logger()
 
         def toggle_scan():
@@ -157,25 +180,15 @@ class GUI:
                 with dpg.theme_component(dpg.mvLineSeries):
                     dpg.add_theme_style(dpg.mvPlotStyleVar_LineWeight, 3, category=dpg.mvThemeCat_Plots)
 
-            with dpg.window(label="DAC Plot", pos=(216,32), height=440, width=716) as plot_window:
-                with dpg.plot(label="DAC Values", parent=plot_window,  height=400, width=700):
+            with dpg.window(label="DAC Plot", pos=(216,32), height=440, width=1372) as plot_window:
+                with dpg.plot(label="DAC Values", parent=plot_window,  height=400, width=1364):
                     dpg.add_plot_legend(show=True, location=9)
                     dpg.add_plot_axis(dpg.mvXAxis, label="Wavelength", tag="xaxis")
                     dpg.add_plot_axis(dpg.mvYAxis, label="Controller Value", tag="yaxis")
-                    idx, wl, fm, bm, ph, soa = self.DAC_list[0], self.DAC_list[5], self.DAC_list[1], self.DAC_list[2], self.DAC_list[3], self.DAC_list[4]
-                    dpg.add_line_series(wl, fm, label="FM", parent="yaxis", tag="data")
-                    dpg.add_line_series(wl, bm, label="BM", parent="yaxis", tag="data2")
-                    dpg.add_line_series(wl, ph, label="PH", parent="yaxis", tag="data3")
-                    dpg.add_line_series(wl, soa, label="SOA", parent="yaxis", tag="data4")
 
-                    data_x, data_y = self.generate_data(self.scan_tracker)
-                    dpg.add_line_series(data_x, data_y, parent="yaxis", tag="tracker")
-
-                    dpg.bind_item_theme("data", "plot_theme")
-                    dpg.bind_item_theme("data2", "plot_theme")
-                    dpg.bind_item_theme("data3", "plot_theme")
-                    dpg.bind_item_theme("data4", "plot_theme")
-                    dpg.bind_item_theme("tracker", "tracker_theme")
+                    dpg.set_axis_limits(axis='xaxis', ymin=1627, ymax=1673)
+                    dpg.set_axis_limits(axis='yaxis', ymin=-100, ymax=75000)
+                    #self.update_plot()
 
         with dpg.window() as primary_window:
             with dpg.menu_bar():
@@ -184,14 +197,20 @@ class GUI:
             dpg.set_primary_window(primary_window, True)
 
             config_width = 200
+
             with dpg.window(label="Config", pos=(8,32), height=800, width=config_width) as laser_config_window:
+
+                enable_laser_button = dpg.add_button(label="Enable Laser", width=config_width-16, callback=self.enable_laser)
+                disable_laser_button = dpg.add_button(label="Disable Laser", width=config_width-16, callback=self.disable_laser)
+                dpg.add_separator()
                 setup_button = dpg.add_button(label="Set Up Laser", width=config_width-16, callback=self.setup)
+                dpg.add_separator()
                 scan_button = dpg.add_button(label="Start Scan", width=config_width-16, callback=toggle_scan)
                 reset_button = dpg.add_button(label="Reset Scan", width=config_width-16, callback=reset_scan)
-                plot_button = dpg.add_button(label="Show Plot", width=config_width-16, callback=show_plot)
-
                 dpg.add_separator()
-
+                plot_button = dpg.add_button(label="Show Plot", width=config_width-16, callback=show_plot)
+                update_plot_buttom = dpg.add_button(label="Update Plot", width = config_width-16, callback=self.update_plot)
+                dpg.add_separator()
                 interpolation_type_input = dpg.add_combo(("Linear", "Curve Fit"))
 
 
