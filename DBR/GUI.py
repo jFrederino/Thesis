@@ -101,32 +101,6 @@ class GUI:
             if self.Laser.log_voltage: 
                 self.Laser.voltage_data.append(self.Laser.read_voltage())
 
-    def update_DAC_plot(self):
-        
-        try: 
-            dpg.delete_item(self.DAC_plot)
-            self._init_DAC_plot()
-        except: pass
-        
-        idx, wl, fm, bm, ph, soa = self.DAC_list[0], self.DAC_list[5], self.DAC_list[1], self.DAC_list[2], self.DAC_list[3], self.DAC_list[4]
-        if idx:
-            dpg.add_line_series(wl, fm, label="FM", parent="DAC_yaxis", tag="data")
-            dpg.add_line_series(wl, bm, label="BM", parent="DAC_yaxis", tag="data2")
-            dpg.add_line_series(wl, ph, label="PH", parent="DAC_yaxis", tag="data3")
-            dpg.add_line_series(wl, soa, label="SOA", parent="DAC_yaxis", tag="data4")
-
-            data_x, data_y = self.generate_data(self.scan_tracker)
-            dpg.add_line_series(data_x, data_y, parent="DAC_yaxis", tag="tracker")
-
-            dpg.bind_item_theme("data", "plot_theme")
-            dpg.bind_item_theme("data2", "plot_theme")
-            dpg.bind_item_theme("data3", "plot_theme")
-            dpg.bind_item_theme("data4", "plot_theme")
-            dpg.bind_item_theme("tracker", "tracker_theme")
-
-            dpg.set_axis_limits_auto(axis='DAC_xaxis')
-            dpg.set_axis_limits_auto(axis='DAC_yaxis')
-
     def generate_data(self, x): #this is TERRIBLE and NEEDS FIXING (needs min and max: only 2 values not 75000!!)
         data_x, data_y = [], []
         for y in range(0, 75000):
@@ -141,7 +115,7 @@ class GUI:
 
     def update_delay(self, sender, data):
         self.delay = data
-        if self.logger_on: self.logger.log(f"Delay: {self.delay}")
+        #if self.logger_on: self.logger.log(f"Delay: {self.delay}")
 
     def update_start_index(self, sender, data:str):
         self.start_index = data
@@ -151,11 +125,21 @@ class GUI:
         self.end_index = data
         if self.logger_on: self.logger.log(f"End Index = {data}")
 
-    def update_start_wavelength(self, sender, data):
-        if self.logger_on: self.logger.log(f"Start WL = {data}")
+    def update_start_wavelength(self, sender, data:float):
+        wl_list = self.DAC_list[-1]
+        closest_wavelength = min(wl_list, key=lambda x:abs(x-data))
+        wl_index = wl_list.index(closest_wavelength)
+        if self.logger_on: self.logger.log(f"Start WL = {closest_wavelength}")
+        self.start_index = wl_index
+        if self.logger_on: self.logger.log(f"Start Index = {self.start_index}")
 
-    def update_end_wavelength(self, sender, data):
-        if self.logger_on: self.logger.log(f"End WL = {data}")
+    def update_end_wavelength(self, sender, data:float):
+        wl_list = self.DAC_list[-1]
+        closest_wavelength = min(wl_list, key=lambda x:abs(x-data))
+        wl_index = wl_list.index(closest_wavelength)
+        if self.logger_on: self.logger.log(f"End WL = {closest_wavelength}")
+        self.end_index = wl_index
+        if self.logger_on: self.logger.log(f"End Index = {self.end_index}")
 
     def toggle_debug(self, sender, data:str):
         self.debug = bool(data)
@@ -177,9 +161,12 @@ class GUI:
         self.interpolation_value = data
         if self.logger_on: self.logger.log(f"Interp Value = {self.interpolation_value}")
 
-    def _init_DAC_plot(self): 
+    def update_DAC_plot(self): 
         plot_width = self.SCREEN_WIDTH-240
         plot_height = self.SCREEN_HEIGHT/2 - (6*self.window_buffer_size)
+        try:
+            dpg.delete_item(self.DAC_plot)
+        except: pass
 
         with dpg.plot(label="DAC Values",  parent= self.DAC_plot_window, height=plot_height-40, width=plot_width-24, tag="DAC_plot") as self.DAC_plot:
             dpg.add_plot_legend(show=True, location=9)
@@ -371,7 +358,7 @@ class GUI:
                             width=plot_width, 
                             no_close=True, 
                             no_move=True) as self.DAC_plot_window:
-                self._init_DAC_plot()
+                self.update_DAC_plot()
 
             with dpg.window(label="Voltage Plot", 
                             pos=(216, plot_height+32+self.window_buffer_size), 
@@ -424,7 +411,7 @@ class GUI:
                 dpg.add_text("Interpolation Value")
                 interpolation_value_input = dpg.add_input_int(default_value=0, width=config_width-32, callback=self.update_interpolation_value)
                 dpg.add_text("Delay")
-                packet_delay_input = dpg.add_slider_float(min_value=0, max_value=1, width=config_width-16, callback=self.update_delay)
+                packet_delay_input = dpg.add_slider_float(min_value=0, default_value=self.delay, max_value=1, width=config_width-16, callback=self.update_delay)
                 dpg.add_text("Wavelength Range")
                 start_wavelength_input = dpg.add_input_float(label="Start", default_value= 1627.5, min_value=1627.5, max_value=1672.4955, min_clamped=True, max_clamped=True, width=config_width/1.5, callback=self.update_start_wavelength)
                 end_wavelength_input = dpg.add_input_float(label="End", default_value= 1672.4955, min_value=1627.5, max_value=1672.4955, min_clamped=True, max_clamped=True, width=config_width/1.5, callback=self.update_end_wavelength)

@@ -47,11 +47,21 @@ class DBR_Spectrometer:
             self._laser_connected = False
             self._default_serial_port = "COM4"
 
-    def check_if_on(self):
+    def check_if_on(self) -> bool:
         read_packet = bytes([16, 0x00, 0x00, 0x00])
         self._laser_serial.write(read_packet)
         response = self.read_response()
-        return response
+        name, status, status_message, gain_value = response
+        res = False
+        if status == 1:
+            if gain_value == 0: 
+                res = False
+            else: 
+                res = True
+        else: 
+            print(status_message)
+        return res
+
 
     def enable(self): 
         '''
@@ -64,8 +74,7 @@ class DBR_Spectrometer:
         #SWEEP = 0                      #GAIN = 255
         _ON = [bytes([167, 0, 0, 0]), bytes([144, 255, 0, 0])]
 
-        if self._laser_on: print("laser is already on.")
-        else:
+        if not self.check_if_on():
             for packet in _ON: 
                 self._laser_serial.write(packet)
                 self.read_response()
@@ -83,12 +92,12 @@ class DBR_Spectrometer:
         #SWEEP = 0                      #GAIN = 0
         _OFF = [bytes([167, 0, 0, 0]), bytes([144, 0, 0, 0])]
 
-        if self._laser_on: 
+        if self.check_if_on():
             for packet in _OFF: 
                 self._laser_serial.write(packet)
                 self.read_response()
             self._laser_on = False
-
+        
         else: print("Laser is already off.")
 
     def set_default_serial_port(self, port_name:str):
