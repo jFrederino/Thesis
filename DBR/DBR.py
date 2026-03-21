@@ -47,6 +47,12 @@ class DBR_Spectrometer:
             self._laser_connected = False
             self._default_serial_port = "COM4"
 
+    def check_if_laser_on(self):
+        read_packet = bytes([16, 0x00, 0x00, 0x00])
+        self._laser_serial.write(read_packet)
+        response = self.read_response()
+        return response
+
     def enable(self): 
         '''
         Turns the laser output on. Connects to default Serial Port {self._default_serial_port} if not connected. Defaults to 1627.5 nm output.
