@@ -14,6 +14,14 @@ Split Hex function in helper.py was using string splitting incorrectly, for some
 #### Integrate GUI with real time processing 
 The GUI now sends packets to the laser and is pausable, but does not include some important functionality. 
 
+## 21 MAR 2026 
+
+#### GUI Scan Parameter Controls
+The GUI config window allows for updating of laser control parameters. more are being added as nessesary. 
+
+#### GUI DAC Table Window
+New DAC LUT Window shows loaded LUT, but still needs functionality, like highlighting and auto scrolling. 
+
 # TO-DO LIST 
 
 ## Command Line argument control
@@ -24,11 +32,11 @@ Using the 'glorified block of glass' (destructive interferance precision wavemet
 
 ## The GUI Side Quest
 
-#### GUI DAC Table 
-The GUI should use DearPyGUI table functionality to display the DAC table being loaded, as well as the current values (and the previous values) being packaged and sent to the Laser. This should help check consistency between the DBR program sanatization and the DAC table in real time.
+#### GUI DAC Table Highlight
+The GUI should display the current values (and the previous values) being packaged and sent to the Laser. This should help check consistency between the DBR program sanatization and the DAC table in real time.
 
-#### GUI Scan Parameter Controls
-Currently the GUI does not allow for creation of a new DBR_Spectrometer Object with different scan parameters. The GUI should be able to set all of these values and initiate a scan or repeated scan with detailed controls.
+#### Start and End Wavelength Parameter controls for table generation.
+Table generator should find closest index to chosen wavelength in default LUT (allows for selecting wavelength range instead of arbitrary index range)
 
 #### GUI File manangement
 The GUI should have the option to both load outside DAC tables, as well as choose to store tables once the scan is completed or not (to save space), same thing goes for plots.

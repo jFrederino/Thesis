@@ -156,8 +156,11 @@ class DBR_Spectrometer:
         if not self._laser_connected: print("Laser not connected.")
         else:
             packets = [fm_packet, bm_packet, ph_packet, soa_packet]
+            responses = []
             for packet in packets:
                 self._laser_serial.write(packet)
+                responses.append(self.read_response())
+            return responses
 
     def _get_interpolation_type(self, start_message):
             self.interpolation_type = helper.get_user_input(message = start_message, input_type="str")

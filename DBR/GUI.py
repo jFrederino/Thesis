@@ -1,12 +1,16 @@
 import time, threading, dearpygui.dearpygui as dpg, dearpygui_ext.logger as dpg_logger, numpy as np
 from DBR import DBR_Spectrometer
 import generate_table as table
-import sys
+import sys, os
 import screeninfo
+from dearpygui_ext.themes import create_theme_imgui_light
+import dearpygui_extend as dpge
+
 
 class GUI:
     def __init__(self, debug: bool = False):
         self.debug = debug
+        self.logger_on: bool = True
 
         self.scan_tracker = 1627.5 #x value of scan tracker line on DAC plot, and table index.
         self.scan_running = False
@@ -41,23 +45,25 @@ class GUI:
             log_voltage = self.log_voltage,
             gui = True)
 
-        self.logger.log("Laser Setup Updated")
+        if self.logger_on: self.logger.log("Laser Setup Updated")
         self.DAC_list = self.Laser.get_table()
 
-        self.logger.log("DAC Table Updated")
+        if self.logger_on: self.logger.log("DAC Table Updated")
 
     def enable_laser(self):
         self.Laser.enable()
+        if self.logger_on: self.logger.log("Laser Enabled")
     
     def disable_laser(self):
         self.Laser.disable()
+        if self.logger_on: self.logger.log("Laser Disabled")
 
     def _scan(self):
         
         self.logger.log("Starting Scan")
         packets = self.Laser.make_packets_list(self.DAC_list)
         num_packets = len(packets)
-        self.logger.log_info(f"Packet : {num_packets}")
+        if self.logger_on: self.logger.log_info(f"Packets : {num_packets}")
 
         for i in range(num_packets):
 
@@ -71,27 +77,28 @@ class GUI:
             if self.Laser.sending_packets: 
                 fm, bm, ph, soa, target_wl = packets[i][0], packets[i][1], packets[i][2], packets[i][3], packets[i][4]
 
-                for packet in packets[i]:
-                    self.scan_tracker = target_wl
-                    self.update_tracker()
-                    if self.debug:
-                        #self.Laser.set_laser_target(fm, bm, ph, soa)
-                    
-                        self.logger.log_info(f'Sending : {packet}')
+                self.scan_tracker = target_wl
+                self.update_tracker()
+                if self.debug:
+                    #self.Laser.set_laser_target(fm, bm, ph, soa)
+                    if self.logger_on: self.logger.log_info(f'Target: {target_wl}')
+                    #self.logger.log_info(f'Sending : {packet}')
+                    for i in range(4):
                         name, status, status_message, gain_value = "debug_name", 0x01, "Command Executed, Response Data Valid: ", i
-                        self.logger.log_debug(f'{name} : {status} : {status_message}{gain_value} \n')
-                        #self.logger.log_info("-"*60)
-                        
-                    else: 
-                        self.Laser.set_laser_target_via_packets(fm, bm, ph, soa)
-                        self.logger.log_info(f'Sending : {packet}')
-                        name, status, status_message, gain_value = self.Laser.read_response()
-                        self.logger.log_info(f'{name} : {status} : {status_message}{gain_value} \n')
-                        #self.logger.log_info("-"*60)
-                    
-                time.sleep(self.Laser.delay)
-                if self.Laser.log_voltage: 
-                    self.Laser.voltage_data.append(self.Laser.read_voltage())
+                        if self.logger_on: self.logger.log_debug(f'{name} : {status} : {status_message}{gain_value} \n')
+                    if self.logger_on: self.logger.log_info("-"*60)
+        
+                else: 
+                    responses:list[tuple] = self.Laser.set_laser_target_via_packets(fm, bm, ph, soa)
+                    if self.logger_on: self.logger.log_info(f'Target: {target_wl}')
+                    for response in responses:
+                        name, status, status_message, gain_value = response
+                        if self.logger_on: self.logger.log_info(f'{name} : {status} : {status_message}{gain_value} \n')
+                    if self.logger_on: self.logger.log_info("-"*60)
+            
+            time.sleep(self.Laser.delay)
+            if self.Laser.log_voltage: 
+                self.Laser.voltage_data.append(self.Laser.read_voltage())
 
 
     
@@ -136,23 +143,39 @@ class GUI:
 
     def update_delay(self, sender, data):
         self.delay = data
-        self.logger.log(f"Delay: {self.delay}")
+        if self.logger_on: self.logger.log(f"Delay: {self.delay}")
 
     def update_start_index(self, sender, data:str):
-        if data.isdigit():
-            self.start_index = int(data)
-            self.logger.log(f"Start Index = {data}")
-        else: self.logger.log_error(f"Start Index: {data} is non integer.")
-
+        self.start_index = data
+        if self.logger_on: self.logger.log(f"Start Index = {data}")
+    
     def update_end_index(self, sender, data:str):
-        if data.isdigit():
-            self.end_index = int(data)
-            self.logger.log(f"End Index = {data}")
-        else: self.logger.log_error(f"End Index: {data} is non integer.")
+        self.end_index = data
+        if self.logger_on: self.logger.log(f"End Index = {data}")
+
+    def update_start_wavelength(self, sender, data):
+        if self.logger_on: self.logger.log(f"Start WL = {data}")
+
+    def update_end_wavelength(self, sender, data):
+        if self.logger_on: self.logger.log(f"End WL = {data}")
 
     def toggle_debug(self, sender, data:str):
         self.debug = bool(data)
-        self.logger.log(f"Debug = {self.debug}")
+        if self.logger_on: self.logger.log(f"Debug = {self.debug}")
+
+    def update_interpolation_type(self, sender, data:str):
+        data = data.lower()
+        match data:
+            case "linear": self.interpolation_type = "linear"
+            case "curve fit": self.interpolation_type = "curve_fit"
+
+        if self.logger_on: self.logger.log(f"Interp Type = {self.interpolation_type}")
+
+    def update_interpolation_value(self, sender, data):
+        self.interpolation_value = data
+        if self.logger_on: self.logger.log(f"Interp Value = {self.interpolation_value}")
+
+
 
     def _init_DAC_plot(self): 
             plot_width = self.SCREEN_WIDTH-240
@@ -168,6 +191,38 @@ class GUI:
                 dpg.set_axis_limits(axis='yaxis', ymin=-100, ymax=75000)
 
             #self.update_plot()
+
+    
+
+    def open_project_file(self):
+        
+        
+
+        CWD = os.path.dirname(os.path.realpath(__file__))
+        with dpg.window(label="Open Project File", tag="browser_window"):
+
+            def show_selected_file(sender, files, cancel_pressed):
+                if self.logger_on: self.logger.log(f"{sender}: {files[0]}")
+                if not cancel_pressed:
+                    dpg.set_value('selected_file', files[0])
+                    project_path = files[0]
+                    if self.logger_on: self.logger.log(f"Loaded File: {project_path}")
+                    dpg.delete_item(item='browser_window')
+
+            dpge.add_file_browser(
+                parent="browser_window",
+                show_as_window=False,
+                default_path=CWD,
+                collapse_sequences=True,
+                allow_multi_selection=False,
+                show_ok_cancel = True, 
+                callback=show_selected_file
+            )
+            dpg.add_text(tag="selected_file")
+
+
+    def save_project_file(self, sender, data):
+        if self.logger_on: self.logger.log(f"Saving Current Project")
 
     def open_DAC_table(self):
         with dpg.window(label="DAC LUT", pos=(932,32), height= self.SCREEN_HEIGHT-(self.window_buffer_size*10), width= 500) as DAC_table_window:
@@ -222,16 +277,19 @@ class GUI:
                 self.scan_paused = False
                 scan_thread = threading.Thread(target=self._scan, args=(), daemon=True)
                 scan_thread.start()
+                if self.logger_on: self.logger.log("Scan Started")
                 dpg.set_item_label(scan_button, "Pause")
             else:
                 if not self.scan_paused:
                     #print("Paused...")
                     self.scan_paused = True
+                    if self.logger_on: self.logger.log("Scan Paused")
                     dpg.set_item_label(scan_button, "Resume")
                     dpg.show_item(reset_button)
                     return
                 #print("Resuming...")
                 self.scan_paused = False
+                if self.logger_on: self.logger.log("Scan Resumed")
                 dpg.set_item_label(scan_button, "Pause")
                 #dpg.hide_item(reset_button)
 
@@ -241,20 +299,27 @@ class GUI:
             self.scan_tracker = 1627.5
 
             dpg.set_item_label(scan_button, "Start Scan")
-
             dpg.enable_item(scan_button)
+
+            if self.logger_on: self.logger.log("Scan Reset")
             #dpg.hide_item(reset_button)
 
-        
+        def set_theme_light():
+            light_theme = create_theme_imgui_light()
+            dpg.bind_theme(light_theme)
 
         with dpg.window() as primary_window:
             with dpg.menu_bar():
                 with dpg.menu(label="View"):
                     dpg.add_menu_item(label="Logger", callback=open_logger)
                     dpg.add_menu_item(label="DAC Table", callback=self.open_DAC_table)
-
-
-
+                with dpg.menu(label="Themes"):
+                    dpg.add_menu_item(label="Dark", callback=lambda: dpg.bind_theme(0))
+                    dpg.add_menu_item(label="Light", callback=set_theme_light)
+                    dpg.add_menu_item(label="Theme Editor", callback=lambda: dpg.show_style_editor())
+                with dpg.menu(label="File"):
+                    dpg.add_menu_item(label="Open Project", callback=self.open_project_file)
+                    dpg.add_menu_item(label="Save As", callback=self.save_project_file)
 
 
             dpg.set_primary_window(primary_window, True)
@@ -278,7 +343,8 @@ class GUI:
             config_width = 200
 
             with dpg.window(label="Config", pos=(8,32), height=self.SCREEN_HEIGHT-self.window_buffer_size*10, width=config_width, no_close=True) as laser_config_window:
-                dpg.add_checkbox(label="Debug Mode", callback=self.toggle_debug)
+                debug_button = dpg.add_checkbox(label="Debug Mode", default_value=self.debug, callback=self.toggle_debug)
+                logger_button = dpg.add_checkbox(label="Log Output", default_value=True, callback=self.logger_on)
                 dpg.add_separator()
                 dpg.add_spacer(height=self.window_buffer_size)
                 enable_laser_button = dpg.add_button(label="Enable Laser", width=config_width-16, callback=self.enable_laser)
@@ -296,17 +362,27 @@ class GUI:
                 update_plot_buttom = dpg.add_button(label="Update Plot", width = config_width-16, callback=self.update_plot)
                 dpg.add_separator()
                 dpg.add_spacer(height=self.window_buffer_size)
+
                 dpg.add_text("Interpolation Type")
-                interpolation_type_input = dpg.add_combo(items=("Linear", "Curve Fit"), width=config_width-16)
+                match self.interpolation_type: #from init of GUI object
+                    case "linear": interpolation_default = "Linear"
+                    case "curve_fit": interpolation_default = "Curve Fit"
+                interpolation_type_input = dpg.add_combo(default_value=interpolation_default, items=("Linear", "Curve Fit"), width=config_width-16, callback=self.update_interpolation_type)
+
+                dpg.add_text("Interpolation Value")
+                interpolation_value_input = dpg.add_input_int(default_value=0, width=config_width-32, callback=self.update_interpolation_value)
                 dpg.add_text("Delay")
                 packet_delay_input = dpg.add_slider_float(min_value=0, max_value=1, width=config_width-16, callback=self.update_delay)
-                start_index_input = dpg.add_input_text(label="Start Index", width=config_width/2, callback=self.update_start_index)
-                end_index_input = dpg.add_input_text(label="End Index", width=config_width/2, callback=self.update_end_index)
+                dpg.add_text("Wavelength Range")
+                start_wavelength_input = dpg.add_input_float(label="Start", default_value= 1627.5, min_value=1627.5, max_value=1672.4955, min_clamped=True, max_clamped=True, width=config_width/1.5, callback=self.update_start_wavelength)
+                end_wavelength_input = dpg.add_input_float(label="End", default_value= 1672.4955, min_value=1627.5, max_value=1672.4955, min_clamped=True, max_clamped=True, width=config_width/1.5, callback=self.update_end_wavelength)
+                dpg.add_separator()
+                dpg.add_spacer(height=self.window_buffer_size)
+                dpg.add_text("Table Index Range")
+                start_index_input = dpg.add_input_int(label="Start", default_value=0, min_clamped=True, width=config_width/1.5, callback=self.update_start_index)
+                end_index_input = dpg.add_input_int(label="End", default_value=9999, min_clamped=True, width=config_width/1.5, callback=self.update_end_index)
                 
-
-
-
-
+                
         dpg.setup_dearpygui()
         dpg.show_viewport()
         dpg.start_dearpygui()
