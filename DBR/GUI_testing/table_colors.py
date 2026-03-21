@@ -4,13 +4,13 @@ dpg.create_context()
 
 with dpg.window(label="Tutorial"):
 
-    with dpg.table(header_row=False, row_background=True,
+    with dpg.table(header_row=True, row_background=True,
                    borders_innerH=True, borders_outerH=True, borders_innerV=True,
                    borders_outerV=True):
 
         # use add_table_column to add columns to the table,
         # table columns use child slot 0
-        dpg.add_table_column()
+        dpg.add_table_column(label="Col1")
         dpg.add_table_column()
         dpg.add_table_column()
 
