@@ -29,6 +29,7 @@ class GUI:
         self.SCREEN_HEIGHT = 480    
         self.SCREEN_WIDTH = 854
         self.window_buffer_size = 8
+        self.port = "COM4"
         dpg.create_context()
         
     def setup(self):
@@ -100,10 +101,7 @@ class GUI:
             if self.Laser.log_voltage: 
                 self.Laser.voltage_data.append(self.Laser.read_voltage())
 
-
-    
-
-    def update_plot(self):
+    def update_DAC_plot(self):
         
         try: 
             dpg.delete_item(self.DAC_plot)
@@ -112,13 +110,13 @@ class GUI:
         
         idx, wl, fm, bm, ph, soa = self.DAC_list[0], self.DAC_list[5], self.DAC_list[1], self.DAC_list[2], self.DAC_list[3], self.DAC_list[4]
         if idx:
-            dpg.add_line_series(wl, fm, label="FM", parent="yaxis", tag="data")
-            dpg.add_line_series(wl, bm, label="BM", parent="yaxis", tag="data2")
-            dpg.add_line_series(wl, ph, label="PH", parent="yaxis", tag="data3")
-            dpg.add_line_series(wl, soa, label="SOA", parent="yaxis", tag="data4")
+            dpg.add_line_series(wl, fm, label="FM", parent="DAC_yaxis", tag="data")
+            dpg.add_line_series(wl, bm, label="BM", parent="DAC_yaxis", tag="data2")
+            dpg.add_line_series(wl, ph, label="PH", parent="DAC_yaxis", tag="data3")
+            dpg.add_line_series(wl, soa, label="SOA", parent="DAC_yaxis", tag="data4")
 
             data_x, data_y = self.generate_data(self.scan_tracker)
-            dpg.add_line_series(data_x, data_y, parent="yaxis", tag="tracker")
+            dpg.add_line_series(data_x, data_y, parent="DAC_yaxis", tag="tracker")
 
             dpg.bind_item_theme("data", "plot_theme")
             dpg.bind_item_theme("data2", "plot_theme")
@@ -126,8 +124,8 @@ class GUI:
             dpg.bind_item_theme("data4", "plot_theme")
             dpg.bind_item_theme("tracker", "tracker_theme")
 
-            dpg.set_axis_limits_auto(axis='xaxis')
-            dpg.set_axis_limits_auto(axis='yaxis')
+            dpg.set_axis_limits_auto(axis='DAC_xaxis')
+            dpg.set_axis_limits_auto(axis='DAC_yaxis')
 
     def generate_data(self, x): #this is TERRIBLE and NEEDS FIXING (needs min and max: only 2 values not 75000!!)
         data_x, data_y = [], []
@@ -163,6 +161,10 @@ class GUI:
         self.debug = bool(data)
         if self.logger_on: self.logger.log(f"Debug = {self.debug}")
 
+    def toggle_log_on(self, sender, data:str):
+        self.logger_on = bool(data)
+        self.logger.log(f"Log Outputs = {self.logger_on}")
+
     def update_interpolation_type(self, sender, data:str):
         data = data.lower()
         match data:
@@ -175,29 +177,60 @@ class GUI:
         self.interpolation_value = data
         if self.logger_on: self.logger.log(f"Interp Value = {self.interpolation_value}")
 
-
-
     def _init_DAC_plot(self): 
-            plot_width = self.SCREEN_WIDTH-240
-            plot_height = self.SCREEN_HEIGHT/2 - 2*self.window_buffer_size
+        plot_width = self.SCREEN_WIDTH-240
+        plot_height = self.SCREEN_HEIGHT/2 - (6*self.window_buffer_size)
 
-            with dpg.plot(label="DAC Values",  parent= self.DAC_plot_window, height=plot_height-40, width=plot_width-24, tag="DAC_plot") as self.DAC_plot:
-                dpg.add_plot_legend(show=True, location=9)
+        with dpg.plot(label="DAC Values",  parent= self.DAC_plot_window, height=plot_height-40, width=plot_width-24, tag="DAC_plot") as self.DAC_plot:
+            dpg.add_plot_legend(show=True, location=9)
 
-                dpg.add_plot_axis(dpg.mvXAxis, parent="DAC_plot", label="Wavelength", tag="xaxis")
-                dpg.add_plot_axis(dpg.mvYAxis, parent="DAC_plot", label="Controller Value", tag="yaxis")
+            dpg.add_plot_axis(dpg.mvXAxis, parent="DAC_plot", label="Wavelength", tag="DAC_xaxis")
+            dpg.add_plot_axis(dpg.mvYAxis, parent="DAC_plot", label="Controller Value", tag="DAC_yaxis")
 
-                dpg.set_axis_limits(axis='xaxis', ymin=1627, ymax=1673)
-                dpg.set_axis_limits(axis='yaxis', ymin=-100, ymax=75000)
+            dpg.set_axis_limits(axis='DAC_xaxis', ymin=1627, ymax=1673)
+            dpg.set_axis_limits(axis='DAC_yaxis', ymin=-100, ymax=75000)
 
-            #self.update_plot()
+        idx, wl, fm, bm, ph, soa = self.DAC_list[0], self.DAC_list[5], self.DAC_list[1], self.DAC_list[2], self.DAC_list[3], self.DAC_list[4]
+        if idx:
+            dpg.add_line_series(wl, fm, label="FM", parent="DAC_yaxis", tag="data")
+            dpg.add_line_series(wl, bm, label="BM", parent="DAC_yaxis", tag="data2")
+            dpg.add_line_series(wl, ph, label="PH", parent="DAC_yaxis", tag="data3")
+            dpg.add_line_series(wl, soa, label="SOA", parent="DAC_yaxis", tag="data4")
 
-    
+            data_x, data_y = self.generate_data(self.scan_tracker)
+            dpg.add_line_series(data_x, data_y, parent="DAC_yaxis", tag="tracker")
+
+            dpg.bind_item_theme("data", "plot_theme")
+            dpg.bind_item_theme("data2", "plot_theme")
+            dpg.bind_item_theme("data3", "plot_theme")
+            dpg.bind_item_theme("data4", "plot_theme")
+            dpg.bind_item_theme("tracker", "tracker_theme")
+
+            dpg.set_axis_limits_auto(axis='DAC_xaxis')
+            dpg.set_axis_limits_auto(axis='DAC_yaxis')
+
+    def _init_voltage_plot(self):
+        plot_width = self.SCREEN_WIDTH-240
+        plot_height = self.SCREEN_HEIGHT/2 - (6*self.window_buffer_size)
+        with dpg.plot(label="Voltage Data",  parent= self.voltage_plot_window, height=plot_height-40, width=plot_width-24, tag="voltage_plot") as self.voltage_plot:
+            dpg.add_plot_legend(show=True, location=9)
+
+            dpg.add_plot_axis(dpg.mvXAxis, parent="voltage_plot", label="Wavelength", tag="V_xaxis")
+            dpg.add_plot_axis(dpg.mvYAxis, parent="voltage_plot", label="Voltage", tag="V_yaxis")
+
+            dpg.set_axis_limits(axis='V_xaxis', ymin=1627, ymax=1673)
+            #dpg.set_axis_limits(axis='V_yaxis', ymin=-100, ymax=100)
+
+    def check_if_laser_on(self):
+        response = self.Laser.check_if_on()
+        name, status, status_message, gain_value = response
+        if self.logger_on: self.logger.log_info(f'{name} : {status} : {status_message}{gain_value} \n')
+
+    def update_com_port(self, sender, data):
+        self.port = data
+        if self.logger_on: self.logger.log(f"Port = {self.port}")
 
     def open_project_file(self):
-        
-        
-
         CWD = os.path.dirname(os.path.realpath(__file__))
         with dpg.window(label="Open Project File", tag="browser_window"):
 
@@ -219,7 +252,6 @@ class GUI:
                 callback=show_selected_file
             )
             dpg.add_text(tag="selected_file")
-
 
     def save_project_file(self, sender, data):
         if self.logger_on: self.logger.log(f"Saving Current Project")
@@ -247,7 +279,14 @@ class GUI:
                     with dpg.table_row():
                         for j in range(0, 6):
                             text_tag = dpg.add_text(f"{self.DAC_list[j][i]}")
-                          
+
+    def open_logger(self):
+            with dpg.window(
+                label="Logger", pos=(932,32), 
+                height= self.SCREEN_HEIGHT-(self.window_buffer_size*10), width= 500,
+                ) as self.logger_window:
+
+                self.logger = dpg_logger.mvLogger(parent=self.logger_window)
 
     def start_window(self):
         monitors = []
@@ -257,20 +296,8 @@ class GUI:
         self.SCREEN_WIDTH = monitor.width
         self.SCREEN_HEIGHT = monitor.height - 50
 
-        #print(str(self.SCREEN_WIDTH) + 'x' + str(self.SCREEN_HEIGHT))
-
-        def open_logger():
-            with dpg.window(
-                label="Logger", pos=(932,32), 
-                height= self.SCREEN_HEIGHT-(self.window_buffer_size*10), width= 500
-                ) as logger_window:
-
-                self.logger = dpg_logger.mvLogger(parent=logger_window)
-
         dpg.create_viewport(x_pos=0, y_pos=0, width=self.SCREEN_WIDTH, height=self.SCREEN_HEIGHT, title="Laser Control")
         
-        open_logger()
-
         def toggle_scan():
             if not self.scan_running:
                 self.scan_running = True
@@ -309,9 +336,14 @@ class GUI:
             dpg.bind_theme(light_theme)
 
         with dpg.window() as primary_window:
+            dpg.set_primary_window(primary_window, True)
+            self.open_logger()
+            #dpg.hide_item(self.logger_window)
+            self.setup()
+
             with dpg.menu_bar():
                 with dpg.menu(label="View"):
-                    dpg.add_menu_item(label="Logger", callback=open_logger)
+                    dpg.add_menu_item(label="Logger", callback=self.open_logger)
                     dpg.add_menu_item(label="DAC Table", callback=self.open_DAC_table)
                 with dpg.menu(label="Themes"):
                     dpg.add_menu_item(label="Dark", callback=lambda: dpg.bind_theme(0))
@@ -320,10 +352,6 @@ class GUI:
                 with dpg.menu(label="File"):
                     dpg.add_menu_item(label="Open Project", callback=self.open_project_file)
                     dpg.add_menu_item(label="Save As", callback=self.save_project_file)
-
-
-            dpg.set_primary_window(primary_window, True)
-
 
             with dpg.theme(tag="plot_theme"):
                 with dpg.theme_component(dpg.mvLineSeries):
@@ -335,22 +363,46 @@ class GUI:
                     dpg.add_theme_style(dpg.mvPlotStyleVar_LineWeight, 3, category=dpg.mvThemeCat_Plots)
 
             plot_width = self.SCREEN_WIDTH-240
-            plot_height = self.SCREEN_HEIGHT/2 - 2*self.window_buffer_size
+            plot_height = self.SCREEN_HEIGHT/2 - 6*self.window_buffer_size
 
-            with dpg.window(label="DAC Plot", pos=(216,32), height=plot_height, width=plot_width, no_close=True) as self.DAC_plot_window:
+            with dpg.window(label="DAC Plot", 
+                            pos=(216,32), 
+                            height=plot_height,
+                            width=plot_width, 
+                            no_close=True, 
+                            no_move=True) as self.DAC_plot_window:
                 self._init_DAC_plot()
 
-            config_width = 200
+            with dpg.window(label="Voltage Plot", 
+                            pos=(216, plot_height+32+self.window_buffer_size), 
+                            height=plot_height, 
+                            width=plot_width, 
+                            no_close=True, 
+                            no_move=True) as self.voltage_plot_window:
+                self._init_voltage_plot()
 
-            with dpg.window(label="Config", pos=(8,32), height=self.SCREEN_HEIGHT-self.window_buffer_size*10, width=config_width, no_close=True) as laser_config_window:
+            config_width = 200
+            dpg.focus_item(self.logger_window)
+
+            with dpg.window(label="Config", 
+                            pos=(8,32), 
+                            height=self.SCREEN_HEIGHT-self.window_buffer_size*10, 
+                            width=config_width, 
+                            no_close=True, 
+                            no_move=True) as laser_config_window:
+                
                 debug_button = dpg.add_checkbox(label="Debug Mode", default_value=self.debug, callback=self.toggle_debug)
-                logger_button = dpg.add_checkbox(label="Log Output", default_value=True, callback=self.logger_on)
+                logger_button = dpg.add_checkbox(label="Log Output", default_value=True, callback=self.toggle_log_on)
                 dpg.add_separator()
                 dpg.add_spacer(height=self.window_buffer_size)
+                COMS_LIST = []
+                dpg.add_text("Serial COM Port")
+                serial_com_input = dpg.add_combo(items=COMS_LIST, width=config_width-16, default_value=self.port, callback=self.update_com_port)
                 enable_laser_button = dpg.add_button(label="Enable Laser", width=config_width-16, callback=self.enable_laser)
                 disable_laser_button = dpg.add_button(label="Disable Laser", width=config_width-16, callback=self.disable_laser)
                 dpg.add_separator()
                 dpg.add_spacer(height=self.window_buffer_size)
+                check_if_on_button = dpg.add_button(label="Check Laser Status", width=config_width-16, callback=self.check_if_laser_on)
                 setup_button = dpg.add_button(label="Update Laser", width=config_width-16, callback=self.setup)
                 dpg.add_separator()
                 dpg.add_spacer(height=self.window_buffer_size)
@@ -359,7 +411,7 @@ class GUI:
                 dpg.add_separator()
                 dpg.add_spacer(height=self.window_buffer_size)
                 #plot_button = dpg.add_button(label="Show Plot", width=config_width-16, callback=show_plot)
-                update_plot_buttom = dpg.add_button(label="Update Plot", width = config_width-16, callback=self.update_plot)
+                update_plot_buttom = dpg.add_button(label="Update Plot", width = config_width-16, callback=self.update_DAC_plot)
                 dpg.add_separator()
                 dpg.add_spacer(height=self.window_buffer_size)
 

@@ -47,7 +47,7 @@ class DBR_Spectrometer:
             self._laser_connected = False
             self._default_serial_port = "COM4"
 
-    def check_if_laser_on(self):
+    def check_if_on(self):
         read_packet = bytes([16, 0x00, 0x00, 0x00])
         self._laser_serial.write(read_packet)
         response = self.read_response()
@@ -63,7 +63,6 @@ class DBR_Spectrometer:
         #These magic numbers are from the decompiled enable/disable code the GUI uses. Registers are undocumented in manual.
         #SWEEP = 0                      #GAIN = 255
         _ON = [bytes([167, 0, 0, 0]), bytes([144, 255, 0, 0])]
-
 
         if self._laser_on: print("laser is already on.")
         else:
@@ -217,7 +216,8 @@ class DBR_Spectrometer:
             raise Exception("Laser not connected.")
         else: 
             response = self._laser_serial.read(4)
-            tqdm.write(f"Full Response: {response}")
+            if not self.gui:
+                tqdm.write(f"Full Response: {response}")
 
             reg = response[0]
             value_msb = response[1]
@@ -254,10 +254,11 @@ class DBR_Spectrometer:
             status_message = "Unknown"
             match status:
                 case 0x01:
-                    status_message = "Command Executed, Response Data Valid: "
-                    tqdm.write(status_message)
                     gain_value = (value_msb << 8) | value_lsb
-                    tqdm.write(f"{name} DAC reads as: {gain_value}")
+                    status_message = "Command Executed, Response Data Valid: "
+                    if not self.gui:
+                        tqdm.write(status_message)
+                        tqdm.write(f"{name} DAC reads as: {gain_value}")
                     
                 case 0x02: status_message = "Register not recognized. "
                 case 0x03: status_message = "Register is Read Only. "
@@ -289,19 +290,20 @@ class DBR_Spectrometer:
         print(f"Preparing: {num_packets} Packets")
 
         packets = self.make_packets_list(DAC_list)
-
-        for i in tqdm(range(len(packets))):
-            tqdm.write(f'Target: {packets[i][4]}')
-            tqdm.write(f"FM:  {packets[i][0]}")
-            tqdm.write(f"BM:  {packets[i][1]}")
-            tqdm.write(f"PH:  {packets[i][2]}")
-            tqdm.write(f"SOA: {packets[i][3]}")
-        
-            if manual:
-                if not automatic and not helper.get_user_input("Proceed to Send Y/N: ", input_type="y/n"):
-                    self.disconnect_from_laser()
+        if not self.gui:
+            for i in tqdm(range(len(packets))):
+                tqdm.write(f'Target: {packets[i][4]}')
+                tqdm.write(f"FM:  {packets[i][0]}")
+                tqdm.write(f"BM:  {packets[i][1]}")
+                tqdm.write(f"PH:  {packets[i][2]}")
+                tqdm.write(f"SOA: {packets[i][3]}")
             
-            tqdm.write(f"waiting {self.delay} second(s)...")
+                if manual:
+                    if not automatic and not helper.get_user_input("Proceed to Send Y/N: ", input_type="y/n"):
+                        self.disconnect_from_laser()
+                
+                tqdm.write(f"waiting {self.delay} second(s)...")
+
             time.sleep(self.delay)
 
             if self.sending_packets: 
