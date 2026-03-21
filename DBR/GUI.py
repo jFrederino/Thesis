@@ -129,7 +129,7 @@ class GUI:
             dpg.set_axis_limits_auto(axis='xaxis')
             dpg.set_axis_limits_auto(axis='yaxis')
 
-    def generate_data(self, x):
+    def generate_data(self, x): #this is TERRIBLE and NEEDS FIXING (needs min and max: only 2 values not 75000!!)
         data_x, data_y = [], []
         for y in range(0, 75000):
             data_x.append(x)
