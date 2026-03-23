@@ -22,7 +22,7 @@ laser2 = DBR_Spectrometer(
     plot_choice = True, 
     plot_both = True,
     delay = 0.01, 
-    sending_packets = False,
+    sending_packets = False, 
     sanatize = False, 
     log_voltage = False)
 

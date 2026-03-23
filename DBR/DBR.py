@@ -26,7 +26,7 @@ class DBR_Spectrometer:
     sending_packets (bool) = True : Decides whether to send packets to the Instatune Module. 
     log_voltage (bool) = False : Decides whether to setup Voltmeter and log voltages via USB.
     '''
-    def __init__(self, mode: str = "manual", start_index: int = 0, end_index: int = 9999, interpolation_type: str = "linear", 
+    def __init__(self, port:str = "COM4", mode: str = "manual", start_index: int = 0, end_index: int = 9999, interpolation_type: str = "linear", 
         interpolation_value:int = 3, plot_choice: bool = False, plot_both: bool = False,
         delay: float = 0.1, sending_packets: bool = True, sanatize: bool = True, log_voltage: bool = False, gui:bool = False):
             self.mode = mode
@@ -45,7 +45,7 @@ class DBR_Spectrometer:
             self.voltage_data = []
             self._laser_on = False
             self._laser_connected = False
-            self._default_serial_port = "COM4"
+            self._default_serial_port = port
 
     def check_if_on(self) -> bool:
         read_packet = bytes([16, 0x00, 0x00, 0x00])
@@ -182,6 +182,14 @@ class DBR_Spectrometer:
                 self._get_interpolation_type(start_message="Please Input Interpolation Type ('linear'/'curve_fit'): ")
             else: return self.interpolation_type
 
+    def get_ports_list(self):
+        ports = serial.tools.list_ports.comports()
+        ports_list = []
+        for port, desc, hwid in sorted(ports):
+            ports_list.append(port)
+        return ports_list
+    
+
     def connect_to_laser(self, target_port:str):
         if self._laser_connected: print(f"Laser is already connected to {self._laser_serial.name}")
         else:
@@ -190,7 +198,7 @@ class DBR_Spectrometer:
                 print("{} : {} [{}]".format(port, desc, hwid))
 
             self._laser_serial = serial.Serial(
-                port = "COM4", 
+                port = self._default_serial_port, 
                 baudrate = 9600, 
                 bytesize = serial.EIGHTBITS,
                 parity = serial.PARITY_NONE, 

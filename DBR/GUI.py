@@ -23,12 +23,13 @@ class GUI:
         self.interpolation_value = 0
         self.delay = 1
         self.sending_packets = True
-        self.log_voltage = False
+        self.log_voltage = True
         self.DAC_list = [[],[],[],[],[],[]]
 
         self.SCREEN_HEIGHT = 480    
         self.SCREEN_WIDTH = 854
         self.window_buffer_size = 8
+        self.plot_unlocked = False
         self.port = "COM4"
 
         self.voltage_data = []
@@ -36,7 +37,9 @@ class GUI:
         
     def setup(self):
         
-        self.Laser = DBR_Spectrometer(mode = "auto",
+        self.Laser = DBR_Spectrometer(
+            port = self.port,
+            mode = "auto",
             start_index = self.start_index, 
             end_index = self.end_index,
             interpolation_type = self.interpolation_type, 
@@ -68,6 +71,7 @@ class GUI:
         num_packets = len(packets)
         if self.logger_on: self.logger.log_info(f"Packets : {num_packets}")
 
+        wl_target_list = []
         for i in range(num_packets):
 
             while self.scan_paused: 
@@ -76,7 +80,7 @@ class GUI:
             if not self.scan_running: return
 
             self.scan_tracker = i
-            wl_target_list = []
+            
             if self.Laser.sending_packets: 
                 fm, bm, ph, soa, target_wl = packets[i][0], packets[i][1], packets[i][2], packets[i][3], packets[i][4]
 
@@ -85,36 +89,34 @@ class GUI:
                 
                 self.update_tracker()
                 if self.debug:
-                    #self.Laser.set_laser_target(fm, bm, ph, soa)
                     if self.logger_on: self.logger.log_info(f'Target: {target_wl}')
-                    #self.logger.log_info(f'Sending : {packet}')
                     for i in range(4):
                         name, status, status_message, gain_value = "debug_name", 0x01, "Command Executed, Response Data Valid: ", i
                         if self.logger_on: self.logger.log_debug(f'{name} : {status} : {status_message}{gain_value} \n')
-                    if self.logger_on: self.logger.log_info("-"*60)
-        
                 else: 
                     responses:list[tuple] = self.Laser.set_laser_target_via_packets(fm, bm, ph, soa)
                     if self.logger_on: self.logger.log_info(f'Target: {target_wl}')
                     for response in responses:
                         name, status, status_message, gain_value = response
                         if self.logger_on: self.logger.log_info(f'{name} : {status} : {status_message}{gain_value} \n')
-                    if self.logger_on: self.logger.log_info("-"*60)
-            
-            time.sleep(self.Laser.delay)
+                    
             if self.Laser.log_voltage: 
-                self.Laser.voltage_data.append(self.Laser.read_voltage())
-                dpg.set_value('v_data', [wl_target_list, self.Laser.voltage_data])
+                new_voltage = self.Laser.read_voltage()
+                #self.Laser.voltage_data.append(new_voltage)
+                self.voltage_data.append(new_voltage)
+                dpg.configure_item('v_data', x=wl_target_list, y=self.voltage_data)
+                self.logger.log_info(f"V = ({target_wl}, {new_voltage})")
+            if self.logger_on: self.logger.log_info("-"*60)
 
-    def generate_data(self, x): #this is TERRIBLE and NEEDS FIXING (needs min and max: only 2 values not 75000!!)
-        data_x, data_y = [], []
-        for y in range(0, 75000):
-            data_x.append(x)
-            data_y.append(y)
+            time.sleep(self.Laser.delay)
+
+
+    def generate_tracker(self, x): #this is TERRIBLE and NEEDS FIXING (needs min and max: only 2 values not 75000!!)
+        data_x, data_y = [x, x], [-10000, 70000]
         return data_x, data_y
 
     def update_tracker(self):
-        data_x, data_y = self.generate_data(self.scan_tracker)
+        data_x, data_y = self.generate_tracker(self.scan_tracker)
         #print(data_x[0])
         dpg.configure_item('tracker', x=data_x, y=data_y)
 
@@ -154,6 +156,10 @@ class GUI:
         self.logger_on = bool(data)
         self.logger.log(f"Log Outputs = {self.logger_on}")
 
+    def toggle_log_voltage(self, sender, data:str):
+        self.log_voltage = bool(data)
+        if self.logger_on: self.logger.log(f"Read Voltage = {self.log_voltage}")
+
     def update_interpolation_type(self, sender, data:str):
         data = data.lower()
         match data:
@@ -180,7 +186,7 @@ class GUI:
             dpg.add_plot_axis(dpg.mvYAxis, parent="DAC_plot", label="Controller Value", tag="DAC_yaxis")
 
             dpg.set_axis_limits(axis='DAC_xaxis', ymin=1627, ymax=1673)
-            dpg.set_axis_limits(axis='DAC_yaxis', ymin=-100, ymax=75000)
+            dpg.set_axis_limits(axis='DAC_yaxis', ymin=-10000, ymax=70000)
 
         idx, wl, fm, bm, ph, soa = self.DAC_list[0], self.DAC_list[5], self.DAC_list[1], self.DAC_list[2], self.DAC_list[3], self.DAC_list[4]
         if idx:
@@ -188,8 +194,7 @@ class GUI:
             dpg.add_line_series(wl, bm, label="BM", parent="DAC_yaxis", tag="data2")
             dpg.add_line_series(wl, ph, label="PH", parent="DAC_yaxis", tag="data3")
             dpg.add_line_series(wl, soa, label="SOA", parent="DAC_yaxis", tag="data4")
-
-            data_x, data_y = self.generate_data(self.scan_tracker)
+            data_x, data_y = self.generate_tracker(self.scan_tracker)
             dpg.add_line_series(data_x, data_y, parent="DAC_yaxis", tag="tracker")
 
             dpg.bind_item_theme("data", "plot_theme")
@@ -198,8 +203,6 @@ class GUI:
             dpg.bind_item_theme("data4", "plot_theme")
             dpg.bind_item_theme("tracker", "tracker_theme")
 
-            dpg.set_axis_limits_auto(axis='DAC_xaxis')
-            dpg.set_axis_limits_auto(axis='DAC_yaxis')
 
     def _init_voltage_plot(self):
         plot_width = self.SCREEN_WIDTH-240
@@ -212,10 +215,8 @@ class GUI:
 
             dpg.set_axis_limits(axis='V_xaxis', ymin=1627, ymax=1673)
 
-            target_wl = []
-            voltage_data = []
-            dpg.add_line_series(target_wl, voltage_data, parent="voltage_plot", tag='v_data')
-
+            dpg.add_line_series(x=[], y=[], parent="V_yaxis", tag='v_data')
+            dpg.bind_item_theme("v_data", "plot_theme")
             #dpg.set_axis_limits(axis='V_yaxis', ymin=-100, ymax=100)
 
     def check_if_laser_on(self):
@@ -225,6 +226,7 @@ class GUI:
 
     def update_com_port(self, sender, data):
         self.port = data
+        self.Laser.set_default_serial_port(self.port)
         if self.logger_on: self.logger.log(f"Port = {self.port}")
 
     def open_project_file(self):
@@ -259,31 +261,49 @@ class GUI:
             with dpg.table(header_row=True, tag=table_tag, row_background=True,
                         borders_innerH=True, borders_outerH=True, borders_innerV=True,
                         borders_outerV=True):
-
-                # use add_table_column to add columns to the table,
-                # table columns use child slot 0
+                
                 dpg.add_table_column(label="IDX")
                 dpg.add_table_column(label="FM DAC")
                 dpg.add_table_column(label="BM DAC")
                 dpg.add_table_column(label="PH DAC")
                 dpg.add_table_column(label="SOA DAC")
                 dpg.add_table_column(label="WL Target")
-                
-                # add_table_next_column will jump to the next row
-                # once it reaches the end of the columns
-                # table next column use slot 1
+
                 for i in range(len(self.DAC_list[0])):
                     with dpg.table_row():
                         for j in range(0, 6):
                             text_tag = dpg.add_text(f"{self.DAC_list[j][i]}")
 
     def open_logger(self):
+        def create_logger_window():
             with dpg.window(
-                label="Logger", pos=(932,32), 
-                height= self.SCREEN_HEIGHT-(self.window_buffer_size*10), width= 500,
-                ) as self.logger_window:
+                    label="Logger", pos=(932,32), 
+                    height= self.SCREEN_HEIGHT-(self.window_buffer_size*10), width= 500,
+                    ) as self.logger_window:
+                    self.logger = dpg_logger.mvLogger(parent=self.logger_window)
+        try: 
+            if not dpg.is_item_visible(self.logger_window):
+                create_logger_window()
+            dpg.focus_item(self.logger_window)
+        except:
+            create_logger_window()
 
-                self.logger = dpg_logger.mvLogger(parent=self.logger_window)
+    def toggle_unlock_plots(self):
+        if not self.plot_unlocked:
+            self.plot_unlocked = True
+            if self.logger_on: self.logger.log("Plot View Unlocked")
+            dpg.set_axis_limits_auto(axis='DAC_xaxis')
+            dpg.set_axis_limits_auto(axis='DAC_yaxis')
+            dpg.set_axis_limits_auto(axis='V_xaxis')
+            dpg.set_item_label(self.toggle_unlock_plots_button, "Lock Plots")
+        else:
+            self.plot_unlocked = False
+            dpg.set_axis_limits(axis='DAC_xaxis', ymin=1627, ymax=1673)
+            dpg.set_axis_limits(axis='DAC_yaxis', ymin=-10000, ymax=70000)
+            dpg.set_axis_limits(axis='V_xaxis', ymin=1627, ymax=1673)
+            if self.logger_on: self.logger.log("Plot View Locked")
+            dpg.set_item_label(self.toggle_unlock_plots_button, "Unlock Plots")
+            #dpg.hide_item(reset_button)
 
     def start_window(self):
         monitors = []
@@ -361,38 +381,47 @@ class GUI:
 
             plot_width = self.SCREEN_WIDTH-240
             plot_height = self.SCREEN_HEIGHT/2 - 6*self.window_buffer_size
-
-            with dpg.window(label="DAC Plot", 
-                            pos=(216,32), 
-                            height=plot_height,
-                            width=plot_width, 
-                            no_close=True, 
-                            no_move=True) as self.DAC_plot_window:
+         
+            with dpg.window(
+                label="DAC Plot", 
+                pos=(216,32), 
+                height=plot_height,
+                width=plot_width, 
+                no_close=True, 
+                no_move=True) as self.DAC_plot_window:
+                
                 self.update_DAC_plot()
+                
 
-            with dpg.window(label="Voltage Plot", 
-                            pos=(216, plot_height+32+self.window_buffer_size), 
-                            height=plot_height, 
-                            width=plot_width, 
-                            no_close=True, 
-                            no_move=True) as self.voltage_plot_window:
+            with dpg.window(
+                label="Voltage Plot", 
+                pos=(216, plot_height+32+self.window_buffer_size), 
+                height=plot_height, 
+                width=plot_width, 
+                no_close=True, 
+                no_move=True) as self.voltage_plot_window:
+
                 self._init_voltage_plot()
 
             config_width = 200
             dpg.focus_item(self.logger_window)
 
-            with dpg.window(label="Config", 
-                            pos=(8,32), 
-                            height=self.SCREEN_HEIGHT-self.window_buffer_size*10, 
-                            width=config_width, 
-                            no_close=True, 
-                            no_move=True) as laser_config_window:
+            with dpg.window(
+                label="Config", 
+                pos=(8,32), 
+                height=self.SCREEN_HEIGHT-self.window_buffer_size*10, 
+                width=config_width, 
+                no_close=True, 
+                no_move=True) as laser_config_window:
                 
                 debug_button = dpg.add_checkbox(label="Debug Mode", default_value=self.debug, callback=self.toggle_debug)
                 logger_button = dpg.add_checkbox(label="Log Output", default_value=True, callback=self.toggle_log_on)
+                voltage_button = dpg.add_checkbox(label="Read Voltage", default_value=self.log_voltage, callback=self.toggle_log_voltage)
                 dpg.add_separator()
                 dpg.add_spacer(height=self.window_buffer_size)
-                COMS_LIST = []
+
+                COMS_LIST = self.Laser.get_ports_list()
+
                 dpg.add_text("Serial COM Port")
                 serial_com_input = dpg.add_combo(items=COMS_LIST, width=config_width-16, default_value=self.port, callback=self.update_com_port)
                 enable_laser_button = dpg.add_button(label="Enable Laser", width=config_width-16, callback=self.enable_laser)
@@ -408,7 +437,8 @@ class GUI:
                 dpg.add_separator()
                 dpg.add_spacer(height=self.window_buffer_size)
                 #plot_button = dpg.add_button(label="Show Plot", width=config_width-16, callback=show_plot)
-                update_plot_buttom = dpg.add_button(label="Update Plot", width = config_width-16, callback=self.update_DAC_plot)
+                update_plot_buttom = dpg.add_button(label="Update DAC Plot", width = config_width-16, callback=self.update_DAC_plot)
+                self.toggle_unlock_plots_button = dpg.add_button(label="Unlock Plots", width= config_width-16, callback=self.toggle_unlock_plots)
                 dpg.add_separator()
                 dpg.add_spacer(height=self.window_buffer_size)
 
@@ -423,8 +453,27 @@ class GUI:
                 dpg.add_text("Delay")
                 packet_delay_input = dpg.add_slider_float(min_value=0, default_value=self.delay, max_value=1, width=config_width-16, callback=self.update_delay)
                 dpg.add_text("Wavelength Range")
-                start_wavelength_input = dpg.add_input_float(label="Start", default_value= 1627.5, min_value=1627.5, max_value=1672.4955, min_clamped=True, max_clamped=True, width=config_width/1.5, callback=self.update_start_wavelength)
-                end_wavelength_input = dpg.add_input_float(label="End", default_value= 1672.4955, min_value=1627.5, max_value=1672.4955, min_clamped=True, max_clamped=True, width=config_width/1.5, callback=self.update_end_wavelength)
+                
+                start_wavelength_input = dpg.add_input_float(
+                    label="Start", 
+                    default_value= 1627.5, 
+                    min_value=1627.5, 
+                    max_value=1672.4955, 
+                    min_clamped=True, 
+                    max_clamped=True, 
+                    width=config_width/1.5, 
+                    callback=self.update_start_wavelength)
+                
+                end_wavelength_input = dpg.add_input_float(
+                    label="End", 
+                    default_value= 1672.4955, 
+                    min_value=1627.5, 
+                    max_value=1672.4955,
+                    min_clamped=True, 
+                    max_clamped=True, 
+                    width=config_width/1.5, 
+                    callback=self.update_end_wavelength)
+                
                 dpg.add_separator()
                 dpg.add_spacer(height=self.window_buffer_size)
                 dpg.add_text("Table Index Range")
