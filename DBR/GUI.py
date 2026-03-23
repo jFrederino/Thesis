@@ -30,6 +30,8 @@ class GUI:
         self.SCREEN_WIDTH = 854
         self.window_buffer_size = 8
         self.port = "COM4"
+
+        self.voltage_data = []
         dpg.create_context()
         
     def setup(self):
@@ -74,11 +76,13 @@ class GUI:
             if not self.scan_running: return
 
             self.scan_tracker = i
-
+            wl_target_list = []
             if self.Laser.sending_packets: 
                 fm, bm, ph, soa, target_wl = packets[i][0], packets[i][1], packets[i][2], packets[i][3], packets[i][4]
 
                 self.scan_tracker = target_wl
+                wl_target_list.append(target_wl)
+                
                 self.update_tracker()
                 if self.debug:
                     #self.Laser.set_laser_target(fm, bm, ph, soa)
@@ -100,6 +104,7 @@ class GUI:
             time.sleep(self.Laser.delay)
             if self.Laser.log_voltage: 
                 self.Laser.voltage_data.append(self.Laser.read_voltage())
+                dpg.set_value('v_data', [wl_target_list, self.Laser.voltage_data])
 
     def generate_data(self, x): #this is TERRIBLE and NEEDS FIXING (needs min and max: only 2 values not 75000!!)
         data_x, data_y = [], []
@@ -206,6 +211,11 @@ class GUI:
             dpg.add_plot_axis(dpg.mvYAxis, parent="voltage_plot", label="Voltage", tag="V_yaxis")
 
             dpg.set_axis_limits(axis='V_xaxis', ymin=1627, ymax=1673)
+
+            target_wl = []
+            voltage_data = []
+            dpg.add_line_series(target_wl, voltage_data, parent="voltage_plot", tag='v_data')
+
             #dpg.set_axis_limits(axis='V_yaxis', ymin=-100, ymax=100)
 
     def check_if_laser_on(self):
