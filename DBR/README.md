@@ -25,12 +25,20 @@ New DAC LUT Window shows loaded LUT, but still needs functionality, like highlig
 #### Log and Debug Toggles Added
 Logger and Debug Statements now have toggles. 
 
+## 22 MAR 2026
+
+#### Enable and Disable Check Laser Via Packets
+The enable and disable methods in DBR.py now read the GAIN value to see if the laser is on.
+
+## 23 MAR 2026
+
+#### Serial Port Connection Config Functionality
+Selection of serial port modifies DBR port default and allow for reconnection to laser. 
+
+#### Voltage Data Dynamic Plot
+Now Showing collected voltage data in real time. 
 
 # TO-DO LIST 
-
-## Enable and Disable Bugs
-The enable and disable methods in DBR.py are a messy and are not checking if they are connected to the laser and asking what it is doing correctly. 
-The new check if on method can fix this easily.
 
 ## Command Line argument control
 The program should accept parameter controls via in-line command line arguements: one command to run the program in its entirety.
@@ -40,15 +48,8 @@ Using the 'glorified block of glass' (destructive interferance precision wavemet
 
 ## The GUI Side Quest
 
-#### Serial Port Connection Config Functionality
-selection of serial port should modify DBR port default and allow for reconnection to laser. 
-Port options should be grabbed via pyserial list ports method. 
-
 #### GUI DAC Table Highlight
 The GUI should display the current values (and the previous values) being packaged and sent to the Laser. This should help check consistency between the DBR program sanatization and the DAC table in real time.
-
-#### Voltage Data Dynamic Plot
-want a window showing collected voltage data in real time. 
 
 #### Start and End Wavelength Parameter controls for table generation.
 Table generator should find closest index to chosen wavelength in default LUT (allows for selecting wavelength range instead of arbitrary index range)
