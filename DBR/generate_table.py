@@ -39,7 +39,8 @@ class DAC_Table:
         self.wl = controllers[5]
 
     def get_DAC_arrays(self, csv_table_path, apply_bounds: bool = False):
-
+        
+        #print(csv_table_path)
         IDX,FM,BM,PH,SOA,WL = [],[],[],[],[],[] 
 
         start_index = self.start_index
@@ -95,6 +96,7 @@ class DAC_Table:
     def plot(self, plot_both: bool = False):
         fig, ax = plt.subplots()
         plt.gcf().set_size_inches(8,6)
+
 
         ax.plot(self.new_wl, self.r_fm, 'o--', ms=0.85, linewidth=0.5, label=f"FM")
         ax.plot(self.new_wl, self.r_bm, 'o--', ms=0.85, linewidth=0.5, label=f"BM")

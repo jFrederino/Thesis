@@ -8,7 +8,7 @@ import pyvisa
 import csv 
 import generate_table as table
 import helper_functions as helper
-
+import pathlib 
 class DBR_Spectrometer:
     '''
     DBR Spectrometer Class Object
@@ -28,7 +28,7 @@ class DBR_Spectrometer:
     '''
     def __init__(self, port:str = "COM4", mode: str = "manual", start_index: int = 0, end_index: int = 9999, interpolation_type: str = "linear", 
         interpolation_value:int = 3, plot_choice: bool = False, plot_both: bool = False,
-        delay: float = 0.1, sending_packets: bool = True, sanatize: bool = True, log_voltage: bool = False, gui:bool = False):
+        delay: float = 0.1, sending_packets: bool = True, sanatize: bool = True, log_voltage: bool = False, saving_LUT: bool = True, gui:bool = False):
             self.mode = mode
             self.start_index = start_index
             self.end_index = end_index
@@ -40,6 +40,7 @@ class DBR_Spectrometer:
             self.sending_packets = sending_packets
             #self.sanatize = sanatize
             self.log_voltage = log_voltage
+            self.saving_LUT = saving_LUT
             self.gui = gui
 
             self.voltage_data = []
@@ -383,22 +384,42 @@ class DBR_Spectrometer:
         return float(self._voltmeter_inst.query("MEAS:VOLT:DC? 0.100,0.001"))
     
     def get_table(self):
+        table_list = []
+        logger_message = ''
+
         if self.interpolation_type == "linear": 
-            table_list = glob.glob(f'**/DAC_Tables/INTERP_{self.interpolation_type, self.start_index, self.end_index}.csv', recursive=True)
+            table_list = glob.glob(f'**/DAC_Tables/INTERP_{self.interpolation_value, self.start_index, self.end_index}.csv', recursive=True)
+            print("FETCH LINEAR")
+            print(table_list)
 
         if self.interpolation_type == "curve_fit": 
-            table_list = glob.glob(f'**/DAC_Tables/EXTRAP_{self.interpolation_type, self.start_index, self.end_index}.csv', recursive=True)
-
-        if not table_list or self.plot_choice:
-
-            DAC_Table = table.DAC_Table(
+            table_list = glob.glob(f'**/DAC_Tables/EXTRAP_{self.interpolation_value, self.start_index, self.end_index}.csv', recursive=True)
+            print("FETCH LINE FIT")
+            print(table_list)
+            
+        try:
+            self.DAC_Table
+        except: 
+            self.DAC_Table = table.DAC_Table(
                 interpolate_type=self.interpolation_type, interpolate_value=self.interpolation_value, 
                 start_index=self.start_index, end_index=self.end_index)
-        
-            path = DAC_Table.generate_DAC_table(interpolate_type=self.interpolation_type, plot_choice=self.plot_choice, plot_both=self.plot_both) #also plots if enabled
-        
-        DAC_list = DAC_Table.get_DAC_arrays(path)  #read values from new table
-        return DAC_list
+
+        if not table_list or self.plot_choice:
+            path = self.DAC_Table.generate_DAC_table(interpolate_type=self.interpolation_type, plot_choice=self.plot_choice, plot_both=self.plot_both) #also plots if enabled
+            logger_message = f"Generated New Table: {path}"
+
+        if table_list: 
+            path = table_list[0]
+            logger_message = f"Found Existing Table: {path}"
+
+        DAC_list = self.DAC_Table.get_DAC_arrays(path)  #read values from table
+
+        if not self.saving_LUT: pathlib.Path.unlink(path) #NOTE: this will delete even previously saved tables, if reusing one. It deletes what DBR is using for the scan right now.
+
+        if self.gui:
+            return DAC_list, logger_message
+        else: 
+            return DAC_list
 
     def scan(self, mode="manual"):
         '''
@@ -424,7 +445,10 @@ class DBR_Spectrometer:
         
         CWD = os.path.dirname(os.path.realpath(__file__))
 
-        DAC_list = self.get_table()  #read values from new table
+        if self.gui:
+            DAC_list, logger_message = self.get_table()  #read values from new table
+        else: 
+            DAC_list = self.get_table()
 
         self.send_packets(DAC_list=DAC_list, manual=self.mode)
         self.write_voltage()
