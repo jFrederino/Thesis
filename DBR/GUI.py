@@ -62,11 +62,16 @@ class GUI:
 
     def enable_laser(self):
         self.Laser.enable()
-        if self.logger_on: self.logger.log("Laser Enabled")
+        
+        if self.logger_on: 
+            self.logger.log("Laser Enabled")
+            self.logger.log(f"{self.Laser.read_voltage()}")
     
     def disable_laser(self):
         self.Laser.disable()
-        if self.logger_on: self.logger.log("Laser Disabled")
+        if self.logger_on: 
+            self.logger.log("Laser Disabled")
+            self.logger.log(f"{self.Laser.read_voltage()}")
 
     def _scan(self):
         
@@ -110,9 +115,12 @@ class GUI:
 
                     if self.logger_on: self.logger.log_info(logger_message)
                     
-                if self.Laser.log_voltage: 
+                if self.log_voltage: 
                     if self.debug: new_voltage = random.randrange(-100,100) / 10000
-                    else: new_voltage = self.Laser.read_voltage()
+                    else: 
+                        try:
+                            new_voltage = self.Laser.read_voltage()
+                        except: self.logger.log_error("Voltmeter Read Error")
                     new_voltage_list.append(new_voltage)
 
                     self.voltage_data.append((target_wl, new_voltage))
@@ -235,7 +243,7 @@ class GUI:
             dpg.bind_item_theme("v_data", "plot_theme")
 
     def check_if_laser_on(self):
-        response = self.Laser.check_if_on()
+        response, res_bool = self.Laser.check_if_on()
         name, status, status_message, gain_value = response
         if self.logger_on: self.logger.log_info(f'{name} : {status} : {status_message}{gain_value} \n')
 
@@ -375,16 +383,20 @@ class GUI:
         if self.logger_on: self.logger.log(f"DAC Plot Saved in: {file_path}")
 
 
-    def show_selected_dir(self, sender, dir, cancel_pressed):
-        #if self.logger_on: self.logger.log(f"{sender}: {dir}")
-        if not cancel_pressed:
-            #dpg.set_value('selected_file', value=dir)
-            path = dir[0]
-            if self.logger_on: self.logger.log(f"Using Directory: {path}")
-            self.new_plot_path = path
-            dpg.delete_item(item='browser_window')
-
+    
+    new_plot_path = ''
     def get_directory_path_from_finder(self):
+        global new_plot_path
+        def show_selected_dir(sender, data, cancel_pressed):
+            global new_plot_path
+            #if self.logger_on: self.logger.log(f"{sender}: {dir}")
+            if not cancel_pressed:
+                #dpg.set_value('selected_file', value=dir)
+                path = dir[0]
+                if self.logger_on: self.logger.log(f"Using Directory: {path}")
+                new_plot_path = path
+                dpg.delete_item(item='browser_window')
+                            
             CWD = os.path.dirname(os.path.realpath(__file__))
             with dpg.window(label="Open Project File", tag="browser_window"):
                 dpge.add_file_browser(
@@ -395,10 +407,10 @@ class GUI:
                     allow_multi_selection=False,
                     show_ok_cancel = True, 
                     dirs_only = True,
-                    callback=self.show_selected_dir
+                    callback=show_selected_dir
                 )
             print(self.new_plot_path)
-            return self.new_plot_path
+            return new_plot_path
             #dpg.add_text(tag="selected_file")
 
     def export_data(self):
@@ -408,7 +420,7 @@ class GUI:
         #Import os and stat Library
     
         #Change the mode of path
-        os.chmod(path, stat.S_IWRITE) 
+        #os.chmod(path, stat.S_IWRITE) 
 
         for pair in self.voltage_data:
             target_wl, voltage = pair

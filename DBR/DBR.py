@@ -61,7 +61,7 @@ class DBR_Spectrometer:
                 res = True
         else: 
             print(status_message)
-        return res
+        return response, res
 
 
     def enable(self): 
@@ -74,8 +74,8 @@ class DBR_Spectrometer:
         #These magic numbers are from the decompiled enable/disable code the GUI uses. Registers are undocumented in manual.
         #SWEEP = 0                      #GAIN = 255
         _ON = [bytes([167, 0, 0, 0]), bytes([144, 255, 0, 0])]
-
-        if not self.check_if_on():
+        response, is_on = self.check_if_on()
+        if not is_on:
             for packet in _ON: 
                 self._laser_serial.write(packet)
                 self.read_response()
@@ -193,7 +193,9 @@ class DBR_Spectrometer:
 
     def connect_to_laser(self, target_port:str):
         if self._laser_connected: print(f"Laser is already connected to {self._laser_serial.name}")
-        else:
+        try: 
+            self._laser_serial
+        except:
             ports = serial.tools.list_ports.comports()
             for port, desc, hwid in sorted(ports):
                 print("{} : {} [{}]".format(port, desc, hwid))
@@ -213,6 +215,7 @@ class DBR_Spectrometer:
         print("Closing Serial Port...")
         name = self._laser_serial.name
         self._laser_serial.close()
+        self._laser_connected = False
         print(f"Serial Port {name} Closed.")
 
     def write_voltage(self):
@@ -374,15 +377,27 @@ class DBR_Spectrometer:
         '''
         try: self._voltmeter_inst
         except: 
-            print("No Voltmeter Instance Found")
-            rm = pyvisa.ResourceManager()
-            print(rm.list_resources())
-            self._voltmeter_inst = rm.open_resource("USB0::0x2A8D::0x1601::MY60077980::INSTR")
-            print(self._voltmeter_inst.query("*IDN?"))
-        
-        #print(self._voltmeter_inst.query("MEAS:VOLT:DC? 0.100,0.001"))
-        return float(self._voltmeter_inst.query("MEAS:VOLT:DC? 0.100,0.001"))
+            self.connect_to_voltmeter()
+
+        return float(self._voltmeter_inst.query("MEAS:VOLT:DC? 10,0.001"))
     
+    def connect_to_voltmeter(self):
+        rm = pyvisa.ResourceManager()
+        print(rm.list_resources())
+        choice = "USB0::0x2A8D::0x1601::MY60077980::INSTR"
+        self._voltmeter_inst = rm.open_resource(choice)
+
+        print(self._voltmeter_inst.query("*IDN?"))
+        print(self._voltmeter_inst.query("MEAS:VOLT:DC? 10,0.001"))
+
+    def disconnect_from_voltmeter(self):
+        try: 
+            self._voltmeter_inst.close()
+        except: 
+            self.connect_to_voltmeter()
+            self.disconnect_from_voltmeter()
+            #print("No Voltmeter pyvisa inst")
+
     def get_table(self):
         table_list = []
         logger_message = ''
@@ -456,4 +471,3 @@ class DBR_Spectrometer:
             
 
    
-

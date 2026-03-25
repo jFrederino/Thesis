@@ -3,10 +3,13 @@
 from DBR import DBR_Spectrometer
 from GUI import GUI
 
+#Laser = DBR_Spectrometer()
+#Laser.read_voltage()
 
-GUI_Main = GUI(debug=True)
 
-#GUI_Main = GUI()
+#GUI_Main = GUI(debug=True)
+
+GUI_Main = GUI()
 
 GUI_Main.start_window()
 
