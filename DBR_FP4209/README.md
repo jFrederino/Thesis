@@ -52,6 +52,13 @@ Now able to add new scan data on top of older scans and compare them, or delete 
 #### Refactored and Reorganized Directories for GUI and Command Line interfaces. 
 Removed a lot of unnesessary code form myGUI Spectrometer.py (Previously DBR.py) and generate_table.py. Also renamed other files, and added directories. Removed some old code that is accessible in repo verison control history. 
 
+## 29 MAR 2026 
+
+#### Tab layout now works
+seperate tabs function correctly.
+
+#### Second Voltage Channel plot.
+Channel 1 works as previously built voltmeter inst. still need to rework depending on voltmeter connected to system, as well as allow for multiple voltmeter comms.
 
 # TO-DO LIST 
 
@@ -69,11 +76,21 @@ Using the 'glorified block of glass' (destructive interferance precision wavemet
 
 ## The GUI Side Quest
 
+#### Logger window management
+Keeps not focusing no matter what I do to try to fix it. Probably a primary window child/class method scope issue. 
+
+#### Config For Laser and Voltmeters should be seperate windows.
+Reorganize based on new tab layout. maybe Laser Config and Voltage Data Config tabs
+This also means methods for setting up two seperate voltmeter instances and communication protocols.
+
 #### GUI DAC Table Highlight
 The GUI should display the current values (and the previous values) being packaged and sent to the Laser. This should help check consistency between the DBR program sanatization and the DAC table in real time.
 
-#### GUI File manangement
+#### GUI File manangement and Plots
 The GUI should have the option to both load outside DAC tables, as well as choose to store tables once the scan is completed or not (to save space), same thing goes for plots.
+
+#### Voltage Plot drag lines for bounds to export via matplotlib.
+Should be able to specify bounds and other features of exported plots from GUI. Drag lines could be neat. 
 
 #### GUI configuration saves (plus saving DAC tables)
 Project files should be loadable and saveable that hold all the configuration data for a given laser scan/protocol. that way, the data collected can be saved with a config file that allows for repeatability and debugging
