@@ -15,13 +15,14 @@ import generate_table as table
 class GUI_Controller:
     def __init__(self, debug: bool = False):
         self.debug = debug
-        self.logger_on: bool = True
+        self.logger_on: bool = True #if false, most class methods will not print update statements in logger in the GUI. some will still print: (Serial and Voltmeter connection info, etc.)
 
+        # scan control tracking
         self.scan_tracker = 1627.5 #x value of scan tracker line on DAC plot, and table index.
         self.scan_running = False
         self.scan_paused = False
 
-        #   scan parameters for DBR object init
+        #  scan parameters for DBR object init
         self.start_index = 0 
         self.end_index = 9999
         self.interpolation_type = "true_linear"
@@ -31,19 +32,23 @@ class GUI_Controller:
         self.log_voltage = True
         self.DAC_list = [[],[],[],[],[],[]]
 
+        # GUI Display parameters
         self.SCREEN_HEIGHT = 480    
         self.SCREEN_WIDTH = 854
         self.window_buffer_size = 8
         self.plot_unlocked = False
+
+        # file management and plotting parameters
         self.saving_LUT = True
         self.new_plot_path = 'default path'
+        self._num_voltage_1_series = 0
+        self._num_voltage_2_series = 0
+        self.voltage_1_data: list[tuple] = []
+        
+        # FP4029 Serial Communication parameters
         self.default_port_name = "COM4"
         self.port_name = "COM4"
 
-        self._num_voltage_1_series = 0
-        self._num_voltage_2_series = 0
-
-        self.voltage_1_data: list[tuple] = []
         dpg.create_context()
         matplotlib.use('Agg')
 
@@ -487,9 +492,7 @@ class GUI_Controller:
             voltage_list.append(voltage)
 
         def create_plots(sender, data, cancel_pressed):
-            #if self.logger_on: self.logger.log(f"{sender}: {dir}")
             if not cancel_pressed:
-                #dpg.set_value('selected_file', value=dir)
                 path = data[0]
                 if self.logger_on: self.logger.log(f"Using Directory: {path}")
                 dpg.delete_item(item='browser_window')
@@ -510,9 +513,6 @@ class GUI_Controller:
                 dirs_only = True,
                 callback=create_plots
             )
-
-        
-        #dpg.add_text(tag="selected_file")
 
     def export_data(self):
         self._write_plots()
@@ -571,14 +571,17 @@ class GUI_Controller:
             disable_laser_button = dpg.add_button(label="Disable Laser", width=config_width-16, callback=self.disable_laser)
             dpg.add_separator()
             dpg.add_spacer(height=self.window_buffer_size)
+            
             check_if_on_button = dpg.add_button(label="Check Laser Status", width=config_width-16, callback=self.check_if_laser_on)
             setup_button = dpg.add_button(label="Update Laser", width=config_width-16, callback=self.setup)
             dpg.add_separator()
             dpg.add_spacer(height=self.window_buffer_size)
+
             scan_button = dpg.add_button(label="Start Scan", width=config_width-16, callback=toggle_scan)
             reset_button = dpg.add_button(label="Reset Scan", width=config_width-16, callback=reset_scan)
             dpg.add_separator()
             dpg.add_spacer(height=self.window_buffer_size)
+
             #plot_button = dpg.add_button(label="Show Plot", width=config_width-16, callback=show_plot)
             update_plot_buttom = dpg.add_button(label="Update DAC Plot", width = config_width-16, callback=self.update_DAC_plot)
             clear_voltage_plot_button = dpg.add_button(label="Clear Voltage Plot", width=config_width-16, callback=self.clear_voltage_plot)
@@ -752,8 +755,8 @@ class GUI_Controller:
                 with dpg.theme_component(dpg.mvLineSeries):
                     dpg.add_theme_style(dpg.mvPlotStyleVar_LineWeight, 3, category=dpg.mvThemeCat_Plots)
 
-
             self.config()
+
             self.create_tab_bar()
             self.load_DAC_tab()
             self.open_logger()

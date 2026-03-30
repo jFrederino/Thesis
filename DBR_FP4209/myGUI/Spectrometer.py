@@ -12,37 +12,31 @@ import ctypes
 
 
 class DBR_Spectrometer:
-    '''
-    DBR Spectrometer Class Object
-
-    Attributes
-    ----------
-
-    start_index (int) = 0 : Start index of DAC table (within original 10,000 value LUT).
-    end_index (int) = 0 : End index of DAC table.
-    interpolation_type (str) = "linear" : either "linear" or "curve_fit" method of DAC value interpolation/extrapolation.
-    interpolation_value (int) = 3 : Number of new DAC values generated between existing points in LUT
-    plot_choice (bool) = False : Decides whether to plot with matplotlib or not.
-    plot_both (bool) = False : Decides whether or not to plot original LUT values under newly generated values.
-    delay (float) = 0.1 : Delay in seconds between packets sent via serial port. 
-    sending_packets (bool) = True : Decides whether to send packets to the Instatune Module. 
-    log_voltage (bool) = False : Decides whether to setup Voltmeter and log voltages via USB.
-    '''
-    def __init__(self, port_name:str = "COM4", start_index: int = 0, end_index: int = 9999, interpolation_type: str = "true_linear", 
-        interpolation_value:int = 3, delay: float = 0.1, sending_packets: bool = True, sanatize: bool = True, log_voltage: bool = False, saving_LUT: bool = True, **port):
-            self.start_index = start_index
-            self.end_index = end_index
-            self.interpolation_type = interpolation_type
-            self.interpolation_value = interpolation_value
-            self.delay = delay
-            self.sending_packets = sending_packets
-            self.log_voltage = log_voltage
-            self.saving_LUT = saving_LUT
-            self._laser_on = False
-            self._laser_connected = False
-            self._default_serial_port = port_name
-            
-            if port: self._laser_serial = port["port"]
+    def __init__(self, 
+        port_name:str = "COM4", 
+        start_index: int = 0, 
+        end_index: int = 9999, 
+        interpolation_type: str = "true_linear", 
+        interpolation_value:int = 3,
+        delay: float = 0.1, 
+        sending_packets: bool = True, 
+        log_voltage: bool = False, 
+        saving_LUT: bool = True, 
+        **port):
+        
+        self.start_index = start_index
+        self.end_index = end_index
+        self.interpolation_type = interpolation_type
+        self.interpolation_value = interpolation_value
+        self.delay = delay
+        self.sending_packets = sending_packets
+        self.log_voltage = log_voltage
+        self.saving_LUT = saving_LUT
+        self._laser_on = False
+        self._laser_connected = False
+        self._default_serial_port = port_name
+        
+        if port: self._laser_serial = port["port"]
 
     def val_to_split_hex(self, val): 
         msb, lsb = divmod(val, 0x100)
@@ -66,11 +60,8 @@ class DBR_Spectrometer:
     def enable(self): 
         '''
         Turns the laser output on. Connects to default Serial Port {self._default_serial_port} if not connected. Defaults to 1627.5 nm output.
-
         '''
-        #self.connect_to_laser(self._default_serial_port)
 
-        #These magic numbers are from the decompiled enable/disable code the GUI uses. 
         #SWEEP = 0                      #GAIN = 255
         _ON = [bytes([167, 0, 0, 0]), bytes([144, 255, 0, 0])]
         response, is_on = self.check_if_on()
@@ -85,10 +76,7 @@ class DBR_Spectrometer:
     def disable(self): 
         '''
         Turns the laser output off. Does NOT disconnect from Serial Connection.
-
         '''
-        #self.connect_to_laser(self._default_serial_port)
-
         #SWEEP = 0                      #GAIN = 0
         _OFF = [bytes([167, 0, 0, 0]), bytes([144, 0, 0, 0])]
 
@@ -321,7 +309,7 @@ class DBR_Spectrometer:
 
         DAC_list = self.DAC_Table.get_DAC_arrays(path)  #read values from table
 
-        if not self.saving_LUT: pathlib.Path.unlink(path) #NOTE: this will delete even previously saved tables, if reusing one. It deletes what DBR is using for the scan right now.
+        if not self.saving_LUT: pathlib.Path.unlink(path) #NOTE: this will delete even previously saved tables, if reusing one. It deletes what DBR is using for current scan after the scan finishes.
 
         return DAC_list, logger_message
    

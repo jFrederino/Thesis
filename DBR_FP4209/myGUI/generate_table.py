@@ -39,8 +39,7 @@ class DAC_Table:
         self.wl = controllers[5]
 
     def get_DAC_arrays(self, csv_table_path, apply_bounds: bool = False):
-        
-        #print(csv_table_path)
+    
         IDX,FM,BM,PH,SOA,WL = [],[],[],[],[],[] 
 
         start_index = self.start_index
@@ -73,11 +72,6 @@ class DAC_Table:
     def _write_DAC_table(self) -> str:
         '''
         Takes in DAC values and Generates csv file.
-
-        Returns
-        -------
-
-        new_table_path (str) : The file path to the newly generated DAC table csv file. (should be in DBR/DAC_Tables).
         '''
         if self.interpolate_type == "true_linear":
             new_table_path = CWD+f'/DAC_Tables/True_Linear_({self.interpolate_value}, {self.start_index}, {self.end_index}).csv'
@@ -142,11 +136,6 @@ class DAC_Table:
     def _linear_interpolate(self) -> str:
         '''
         Takes controller values from DAC table and linearly interpolates new DAC values. Saves new values to self.r_[controller_name]. Also generates new DAC table with new values.
-        
-        Returns
-        -------
-
-        new_table_path (str) : The file path to the newly generated DAC table csv file. (should be in DBR/DAC_Tables).
         '''
         fm = self.fm
         bm = self.bm
@@ -162,20 +151,12 @@ class DAC_Table:
         for i in range(0, len(wl)-1):
             #i is index of current left bound DAC value
             next_wl = wl[i+1]
-            #if we need to skip large discontinuities: 
-            '''
-            fm_gap = abs(int(fm[i] - fm[i+1]))
-            bm_gap = abs(int(bm[i] - bm[i+1]))
-            ph_gap = abs(int(ph[i] - ph[i+1]))
-            soa_gap = abs(int(soa[i] - soa[i+1]))
-            '''
+
             interp_wavelengths = [] #for each gap we interpolate
             interp_wavelengths.append(wl[i])
             for k in range(1, res):
                 interp_wavelengths.append(wl[i] + (delta * k)) #starts at k = 0 so it keeps the original points
 
-            #for each DAC type:
-            #if fm_gap < 1000:
             interp_fm = np.interp(interp_wavelengths, [wl[i], next_wl], [fm[i], fm[i+1]])
             interp_bm = np.interp(interp_wavelengths, [wl[i], next_wl], [bm[i], bm[i+1]])
             interp_ph = np.interp(interp_wavelengths, [wl[i], next_wl], [ph[i], ph[i+1]])
@@ -221,9 +202,6 @@ class DAC_Table:
 
             if discontinuities_controller_indices.size == 0:
                 print("NO DISCONTINUTIES")
-
-            #print(f"{controller_name}: {discontinuities_controller_indices.size}")
-            #print(discontinuities_controller_indices)
 
             r_values = []
             w_values = []
@@ -314,13 +292,7 @@ class DAC_Table:
     def _line_fit(self) -> str:
         '''
         Extrapolates new DAC values by fitting curves (lines) to original DAC table. Creates new DAC table and saves new points to self.r_[controller_name].
-
-        Returns
-        -------
-
-        new_table_path (str) : The file path to the newly generated DAC table csv file. (should be in DBR/DAC_Tables).
         '''
-
         #https://stackoverflow.com/a/49087165
         #https://stackoverflow.com/a/64929683
         #https://stackoverflow.com/a/48507056
@@ -344,9 +316,6 @@ class DAC_Table:
 
             if discontinuities_controller_indices.size == 0:
                 print("NO DISCONTINUTIES")
-
-            #print(f"{controller_name}: {discontinuities_controller_indices.size}")
-            #print(discontinuities_controller_indices)
 
             r_values = []
             w_values = []
@@ -388,18 +357,15 @@ class DAC_Table:
                     popt, pcov = curve_fit(linear_function, x, y)
                     extrapolated_values = linear_function(xfine, *popt)
                     prev = xfine[0] 
-
                     for value in extrapolated_values: 
                         new = round(value)
                         if new < minimum or new > maximum:
-                            #print(f"cutoff! {controller_name}: {new} is replaced with {prev}")
                             r_values.append(prev)
                             #prev stays the same
                         else:
                             r_values.append(new)
                             prev = new
-
-                else: #you cant fit a curve to a single point lol (this bug caused such a headache)
+                else:
                     extrapolated_values = [y[0]]
                     next_value = y[0]
                     for i in range(res-1):
@@ -421,17 +387,9 @@ class DAC_Table:
     def generate_DAC_table(self, interpolate_type: str = "true_linear", start_index:int = 0, end_index:int = 9999) -> str:
         '''
         Generates new DAC table and outputs the path to the new table.
-
-        Returns
-        -------
-
-        new_table_path (str) : The file path to the newly generated DAC table csv file. (should be in DBR/DAC_Tables).
         '''
-        #csv_table_path = DAC_TABLE_PATH
         DAC_arrays = self.get_DAC_arrays(DAC_TABLE_PATH, apply_bounds=True) #this is what narrows down what we are interpolating between
-        self.update_DAC_values(DAC_arrays) #writes values to self variables 
-
-        #if not interpolate_val: return DAC_TABLE_PATH
+        self.update_DAC_values(DAC_arrays)
 
         if interpolate_type == "true_linear": 
             new_table_path = self._linear_interpolate()
@@ -446,9 +404,8 @@ class DAC_Table:
         return new_table_path
         
     def visualize_parameters_5D(self):
-        DAC_arrays = self.get_DAC_arrays() #this is what narrows down what we are interpolating between
+        DAC_arrays = self.get_DAC_arrays()
 
-        #if not interpolate_val: return DAC_TABLE_PATH
         fm,bm,ph,soa,wl = DAC_arrays[1],DAC_arrays[2],DAC_arrays[3],DAC_arrays[4],DAC_arrays[5]
 
         fig = plt.figure()
