@@ -199,6 +199,14 @@ class GUI_Controller:
         if self.logger_on:
             self.logger.log(f"Scan Complete!")
 
+    def import_LUT(self):
+        def update_DAC_table(path):
+            t = table.DAC_Table()
+            self.DAC_list = t.get_DAC_arrays(path)
+            
+        self.open_file_browser(update_DAC_table)
+        self.update_DAC_plot()
+
     def update_plot_path(self, path):
         self.new_plot_path = path
 
@@ -516,7 +524,6 @@ class GUI_Controller:
                 collapse_sequences=True,
                 allow_multi_selection=False,
                 show_ok_cancel = True, 
-                dirs_only = True,
                 callback= close_browser
             )
 
@@ -795,7 +802,7 @@ class GUI_Controller:
                     dpg.add_menu_item(label="Theme Editor", callback=lambda: dpg.show_style_editor())
                 with dpg.menu(label="File"):
                     dpg.add_menu_item(label="Open Project", callback=self.open_project_file)
-                    dpg.add_menu_item(label="Open LUT")
+                    dpg.add_menu_item(label="Open LUT", callback=self.import_LUT)
                     with dpg.menu(label="Save"):
                         dpg.add_menu_item(label="Save Project As", callback=self.save_project_file) #NOTE: NOT IMPLEMENTED
                         dpg.add_menu_item(label="Export Plots", callback=self.export_plots)
