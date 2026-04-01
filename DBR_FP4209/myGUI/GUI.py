@@ -44,6 +44,7 @@ class GUI_Controller:
         self._num_voltage_1_series = 0
         self._num_voltage_2_series = 0
         self.voltage_1_data: list[tuple] = []
+        self.settle_delay: float = 1.000
         
         # FP4029 Serial Communication parameters
         self.default_port_name = "COM4"
@@ -97,11 +98,8 @@ class GUI_Controller:
         return ports_message
 
     def connect_to_laser(self):
-        try: 
-            #self.port
-            self.logger.log(f"Already Connected to {self.port.name}")
-        except:
-            self.logger.log(f"Connecting to Laser via Port '{self.port_name}")
+        def _new_connection():
+            self.logger.log(f"Connecting to Laser via Port '{self.port_name}'")
             try:
                 self.port = serial.Serial(
                     port = self.port_name, 
@@ -111,22 +109,30 @@ class GUI_Controller:
                     timeout = 1) 
                 
                 self.logger.log(f"Serial port {self.port.name} opened successfully.")
+                self.setup()
             except:
                 self.logger.log_error(f"Port '{self.port_name}' could not be found.")
                 self.log_available_ports()
+        try: 
+            #self.port
+            if self.port_name == self.port.name:
+                self.logger.log(f"Already Connected to '{self.port.name}'")
+            else: 
+                _new_connection()
+        except: _new_connection()
 
     def enable_laser(self):
         self.Laser.enable()
         
         if self.logger_on: 
             self.logger.log("Laser Enabled")
-            self.logger.log(f"{self.Laser.read_voltage()}")
+            self.logger.log(f"Voltage: {self.Laser.read_voltage()}")
     
     def disable_laser(self):
         self.Laser.disable()
         if self.logger_on: 
             self.logger.log("Laser Disabled")
-            self.logger.log(f"{self.Laser.read_voltage()}")
+            self.logger.log(f"Voltage: {self.Laser.read_voltage()}")
 
     def _scan(self):
         self.logger.log("Starting Scan")
@@ -136,6 +142,7 @@ class GUI_Controller:
 
         wl_target_list = []
         self.add_voltage_1_series()
+        self.voltage_1_data: list[tuple] = []
         new_voltage_1_list = []
 
         #create New Voltage series for plot
@@ -176,6 +183,8 @@ class GUI_Controller:
                     if self.debug: new_voltage = random.randrange(-5000,5000) / 1000
                     else: 
                         try:
+                            time.sleep(self.settle_delay)
+        
                             new_voltage = self.Laser.read_voltage()
                         except: self.logger.log_error("Voltmeter Read Error")
                     new_voltage_1_list.append(new_voltage)
@@ -206,6 +215,10 @@ class GUI_Controller:
         self.delay = data
         #if sender != "delay_slider":
         if self.logger_on: self.logger.log(f"Delay: {self.delay}")
+    def update_settle_delay(self, sender, data):
+        self.settle_delay = data
+        #if sender != "delay_slider":
+        if self.logger_on: self.logger.log(f"Delay: {self.settle_delay}")
 
     def update_start_index(self, sender, data:str):
         self.start_index = data
@@ -259,7 +272,7 @@ class GUI_Controller:
 
     def update_DAC_plot(self): 
         plot_width = self.SCREEN_WIDTH-240
-        plot_height = self.SCREEN_HEIGHT/2 - (6*self.window_buffer_size)
+        plot_height = self.SCREEN_HEIGHT - (15*self.window_buffer_size)
         
         try: dpg.delete_item(self.DAC_plot)
         except: pass
@@ -361,7 +374,7 @@ class GUI_Controller:
             )
             dpg.add_text(tag="selected_file")
 
-    def save_project_file(self, sender, data):
+    def save_project_file(self, sender, data): #NOTE: NOT IMPLEMENTED
         if self.logger_on: self.logger.log(f"Saving Current Project")
 
     def open_DAC_table(self):
@@ -482,25 +495,18 @@ class GUI_Controller:
         dpg.delete_item("V_1_yaxis", children_only=True)
         dpg.delete_item("V_2_yaxis", children_only=True)
 
-    def _write_plots(self):
-        wl_list = []
-        voltage_list = []
-    
-        for pair in self.voltage_1_data:
-            target_wl, voltage = pair
-            wl_list.append(target_wl)
-            voltage_list.append(voltage)
+    def open_file_browser(self, callback_function):
 
-        def create_plots(sender, data, cancel_pressed):
-            if not cancel_pressed:
-                path = data[0]
-                if self.logger_on: self.logger.log(f"Using Directory: {path}")
-                dpg.delete_item(item='browser_window')
-                print(F"NEW PATH: {path}")
+        def close_browser(sender, data, cancel_pressed):
+            def new_func():
+                if not cancel_pressed:
+                    path = data[0]
+                    if self.logger_on: self.logger.log(f"Using Directory: {path}")
+                    dpg.delete_item(item='browser_window')
+                    print(F"NEW PATH: {path}")
+                    callback_function(path)
+            new_func()
 
-                self.create_DAC_plot_file(path)
-                self.create_voltage_plot_file(path, wl_list, voltage_list)
-            
         CWD = os.path.dirname(os.path.realpath(__file__))
         with dpg.window(label="Open Project File", tag="browser_window"):
             dpge.add_file_browser(
@@ -511,11 +517,49 @@ class GUI_Controller:
                 allow_multi_selection=False,
                 show_ok_cancel = True, 
                 dirs_only = True,
-                callback=create_plots
+                callback= close_browser
             )
 
-    def export_data(self):
-        self._write_plots()
+    def export_plots(self):
+        def create_plots(path):
+            wl_list = []
+            voltage_list = []
+            for pair in self.voltage_1_data:
+                target_wl, voltage = pair
+                wl_list.append(target_wl)
+                voltage_list.append(voltage)
+
+            self.create_DAC_plot_file(path)
+            self.create_voltage_plot_file(path, wl_list, voltage_list)
+            
+        self.open_file_browser(callback_function=create_plots)
+    
+    def export_voltage_data(self):
+        self.open_file_browser(callback_function=self.write_voltage_data)
+
+    def write_voltage_data(self, path):
+        import csv
+        CWD = os.path.dirname(os.path.realpath(__file__))
+        if self.interpolation_type == "true_linear":
+            new_table_path = path + f'/True_Linear_({self.interpolation_value}, {self.start_index}, {self.end_index}).csv'
+
+        if self.interpolation_type == "linear_extrapolation":
+            new_table_path = path + f'/Linear_Extrapolation_({self.interpolation_value}, {self.start_index}, {self.end_index}).csv'
+
+        if self.interpolation_type == "line_fit":
+            new_table_path = path + f'/Line_Fit_({self.interpolation_value}, {self.start_index}, {self.end_index}).csv'
+
+        with open(new_table_path, 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile, delimiter=',', quotechar='|')
+            writer.writerow(['IDX','Voltage','Target Wl'])
+            idx = 0
+            for pair in self.voltage_1_data:  
+                target_wl, voltage = pair
+                writer.writerow([idx, voltage, target_wl])
+                idx += 1
+
+        csvfile.close()
+
 
     def config(self):
         def toggle_scan():
@@ -548,7 +592,7 @@ class GUI_Controller:
         config_width = 200
 
         with dpg.window(
-            label="Config", 
+            label="Laser Config", 
             pos=(8,48), 
             height=self.SCREEN_HEIGHT-self.window_buffer_size*10, 
             width=config_width, 
@@ -558,14 +602,14 @@ class GUI_Controller:
             debug_button = dpg.add_checkbox(label="Debug Mode", default_value=self.debug, callback=self.toggle_debug)
             logger_button = dpg.add_checkbox(label="Log Output", default_value=True, callback=self.toggle_log_on)
             voltage_button = dpg.add_checkbox(label="Read Voltage", default_value=self.log_voltage, callback=self.toggle_log_voltage)
-            save_tables_button = dpg.add_checkbox(label="Save Data", default_value=self.saving_LUT, callback=self.toggle_save_LUT)
+            save_tables_button = dpg.add_checkbox(label="Save LUT", default_value=self.saving_LUT, callback=self.toggle_save_LUT)
             dpg.add_separator()
             dpg.add_spacer(height=self.window_buffer_size)
 
             COMS_LIST = self.Laser.get_ports_list()
 
-            dpg.add_text("Serial COM Port")
             connect_to_laser_button = dpg.add_button(label="Connect to Laser", width=config_width-16, callback=self.connect_to_laser)
+            dpg.add_text("Serial COM Port")
             serial_com_input = dpg.add_combo(items=COMS_LIST, width=config_width-16, default_value=self.port_name, callback=self.update_com_port)
             enable_laser_button = dpg.add_button(label="Enable Laser", width=config_width-16, callback=self.enable_laser)
             disable_laser_button = dpg.add_button(label="Disable Laser", width=config_width-16, callback=self.disable_laser)
@@ -589,6 +633,26 @@ class GUI_Controller:
             dpg.add_separator()
             dpg.add_spacer(height=self.window_buffer_size)
 
+            dpg.add_text("Packet Delay")
+            #packet_delay_slider = dpg.add_slider_float(min_value=0, default_value=self.delay, max_value=1, width=config_width-16, callback=self.update_delay, tag="delay_slider")
+            packet_delay_input = dpg.add_input_float(
+                default_value=1.0,
+                min_value= 0, 
+                min_clamped=True, 
+                max_clamped=False,
+                width=config_width-16, 
+                callback=self.update_delay)
+            
+            dpg.add_text("Settle Delay")
+            #packet_delay_slider = dpg.add_slider_float(min_value=0, default_value=self.delay, max_value=1, width=config_width-16, callback=self.update_delay, tag="delay_slider")
+            packet_delay_input = dpg.add_input_float(
+                default_value=1.0,
+                min_value= 0, 
+                min_clamped=True, 
+                max_clamped=False,
+                width=config_width-16, 
+                callback=self.update_settle_delay)
+
             dpg.add_text("Interpolation Type")
             match self.interpolation_type: #from init of GUI object
                 case "true_linear": interpolation_default = "True Linear"
@@ -603,18 +667,8 @@ class GUI_Controller:
 
             dpg.add_text("Interpolation Value")
             interpolation_value_input = dpg.add_input_int(default_value=0, width=config_width-16, callback=self.update_interpolation_value)
-            dpg.add_text("Packet Delay")
-            #packet_delay_slider = dpg.add_slider_float(min_value=0, default_value=self.delay, max_value=1, width=config_width-16, callback=self.update_delay, tag="delay_slider")
-            packet_delay_input = dpg.add_input_float(
-                default_value=1.0,
-                min_value= 0, 
-                min_clamped=True, 
-                max_clamped=False,
-                width=config_width-16, 
-                callback=self.update_delay)
             
             dpg.add_text("Wavelength Range")
-            
             start_wavelength_input = dpg.add_input_float(
                 label="Start", 
                 default_value= 1627.5, 
@@ -645,7 +699,7 @@ class GUI_Controller:
 
     def load_DAC_tab(self):
         plot_width = self.SCREEN_WIDTH-240
-        plot_height = self.SCREEN_HEIGHT/2 - 6*self.window_buffer_size
+        plot_height = self.SCREEN_HEIGHT - 15*self.window_buffer_size
         if not dpg.does_item_exist("DAC_window"):
             if not dpg.get_item_children("DAC View", 1):
                 with dpg.window(
@@ -743,8 +797,9 @@ class GUI_Controller:
                     dpg.add_menu_item(label="Open Project", callback=self.open_project_file)
                     dpg.add_menu_item(label="Open LUT")
                     with dpg.menu(label="Save"):
-                        dpg.add_menu_item(label="Save Project As", callback=self.save_project_file)
-                        dpg.add_menu_item(label="Export Data", callback=self.export_data)
+                        dpg.add_menu_item(label="Save Project As", callback=self.save_project_file) #NOTE: NOT IMPLEMENTED
+                        dpg.add_menu_item(label="Export Plots", callback=self.export_plots)
+                        dpg.add_menu_item(label="Export Voltage Data", callback=self.export_voltage_data)
                         
             with dpg.theme(tag="plot_theme"):
                 with dpg.theme_component(dpg.mvLineSeries):
@@ -758,6 +813,10 @@ class GUI_Controller:
             self.config()
 
             self.create_tab_bar()
+            self.load_Voltage_tab()
+            if dpg.does_item_exist("voltage_1_window"):
+                dpg.hide_item("voltage_1_window")
+                dpg.hide_item("voltage_2_window")
             self.load_DAC_tab()
             self.open_logger()
                     
