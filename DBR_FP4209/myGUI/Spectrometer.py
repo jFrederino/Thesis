@@ -18,9 +18,6 @@ class DBR_Spectrometer:
         end_index: int = 9999, 
         interpolation_type: str = "true_linear", 
         interpolation_value:int = 3,
-        delay: float = 0.1, 
-        sending_packets: bool = True, 
-        log_voltage: bool = False, 
         saving_LUT: bool = True, 
         **port):
         
@@ -28,10 +25,8 @@ class DBR_Spectrometer:
         self.end_index = end_index
         self.interpolation_type = interpolation_type
         self.interpolation_value = interpolation_value
-        self.delay = delay
-        self.sending_packets = sending_packets
-        self.log_voltage = log_voltage
         self.saving_LUT = saving_LUT
+
         self._laser_on = False
         self._laser_connected = False
         self._default_serial_port = port_name
@@ -246,32 +241,6 @@ class DBR_Spectrometer:
             #sys.exit()
 
         return name, status, status_message, gain_value
-
-    def read_voltage(self) -> float:
-        '''
-        Measures voltage via connected Voltmeter
-        '''
-        try: self._voltmeter_inst
-        except: 
-            self.connect_to_voltmeter()
-
-        return float(self._voltmeter_inst.query("MEAS:VOLT:DC? 10,0.001"))
-    
-    def connect_to_voltmeter(self):
-        rm = pyvisa.ResourceManager()
-        print(rm.list_resources())
-        choice = "USB0::0x2A8D::0x1601::MY60077980::INSTR"
-        self._voltmeter_inst = rm.open_resource(choice)
-
-        print(self._voltmeter_inst.query("*IDN?"))
-        print(self._voltmeter_inst.query("MEAS:VOLT:DC? 10,0.001"))
-
-    def disconnect_from_voltmeter(self):
-        try: 
-            self._voltmeter_inst.close()
-        except: 
-            self.connect_to_voltmeter()
-            self.disconnect_from_voltmeter()
 
     def get_table(self):
         table_list = []
