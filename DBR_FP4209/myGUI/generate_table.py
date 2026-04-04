@@ -17,11 +17,11 @@ if not DAC_TABLE_PATH_LIST: raise Exception("UU341_LUT_0v0.csv not found in CWD"
 else: DAC_TABLE_PATH = DAC_TABLE_PATH_LIST[0]
 
 class DAC_Table:
-    def __init__(self, start_index: int = 0, end_index: int = 9999, 
+    def __init__(self, start_wl: float = 1627.5, end_wl: float = 1672.4955, 
                  interpolate_value: int = 3, interpolate_type: str = "true_linear"): 
 
-        self.start_index = start_index
-        self.end_index = end_index
+        self.start_wl = start_wl
+        self.end_wl = end_wl
         self.interpolate_value = interpolate_value
         self.interpolate_type = interpolate_type
 
@@ -38,13 +38,10 @@ class DAC_Table:
         self.soa = controllers[4]
         self.wl = controllers[5]
 
-    def get_DAC_arrays(self, csv_table_path, apply_bounds: bool = False):
+    def get_DAC_arrays(self, csv_table_path, apply_bounds: bool = True):
     
         IDX,FM,BM,PH,SOA,WL = [],[],[],[],[],[] 
 
-        start_index = self.start_index
-        end_index = self.end_index
-    
         with open(csv_table_path, newline='') as f:
             reader = csv.reader(f, delimiter=',', quotechar='|')
             next(reader) #skip headers
@@ -56,6 +53,9 @@ class DAC_Table:
                 SOA.append(int(row[4]))
                 WL.append(float(row[5]))
                 
+        start_index = WL.index(min(WL, key=lambda x:abs(x-self.start_wl)))
+        end_index =  WL.index(min(WL, key=lambda x:abs(x-self.end_wl)))
+
         if apply_bounds:
             idx = IDX[start_index:end_index]
             fm = FM[start_index:end_index]
@@ -74,13 +74,13 @@ class DAC_Table:
         Takes in DAC values and Generates csv file.
         '''
         if self.interpolate_type == "true_linear":
-            new_table_path = CWD+f'/DAC_Tables/True_Linear_({self.interpolate_value}, {self.start_index}, {self.end_index}).csv'
+            new_table_path = CWD+f'/DAC_Tables/True_Linear_({self.interpolate_value}, {self.start_wl}, {self.end_wl}).csv'
 
         if self.interpolate_type == "line_fit":
-            new_table_path = CWD+f'/DAC_Tables/Line_Fit_({self.interpolate_value}, {self.start_index}, {self.end_index}).csv'
+            new_table_path = CWD+f'/DAC_Tables/Line_Fit_({self.interpolate_value}, {self.start_wl}, {self.end_wl}).csv'
 
         if self.interpolate_type == "linear_extrapolation":
-            new_table_path = CWD+f'/DAC_Tables/Linear_Extrapolation_({self.interpolate_value}, {self.start_index}, {self.end_index}).csv'
+            new_table_path = CWD+f'/DAC_Tables/Linear_Extrapolation_({self.interpolate_value}, {self.start_wl}, {self.end_wl}).csv'
 
         with open(new_table_path, 'w', newline='') as csvfile:
             writer = csv.writer(csvfile, delimiter=',', quotechar='|')
@@ -90,49 +90,6 @@ class DAC_Table:
 
         return new_table_path
     
-    def plot(self):
-        fig, ax = plt.subplots()
-        plt.gcf().set_size_inches(8,6)
-
-        ax.plot(self.new_wl, self.r_fm, 'o--', ms=0.85, linewidth=0.5, label=f"FM")
-        ax.plot(self.new_wl, self.r_bm, 'o--', ms=0.85, linewidth=0.5, label=f"BM")
-        ax.plot(self.new_wl, self.r_ph, 'o--', ms=0.85, linewidth=0.5, label=f"PH")
-        ax.plot(self.new_wl, self.r_soa, 'o--', ms=0.85, linewidth=0.5, label=f"SOA")
-
-        if not self.interpolate_value:
-            plt.title(f'Default DAC Parameters ({self.start_index}, {self.end_index})')
-
-        if self.interpolate_value > 0 and self.interpolate_type == "true_linear": #for clarity's sake
-            plt.title(f'DAC Parameters ({self.start_index}, {self.end_index}) Interpolated with {self.interpolate_value} Intermediate Integer Values')
-
-        if self.interpolate_value > 0 and self.interpolate_type == "line_fit":
-            plt.title(f'DAC Parameters ({self.start_index}, {self.end_index}) Extrapolated with {self.interpolate_value} Intermediate Integer Values')
-
-        if self.interpolate_value > 0 and self.interpolate_type == "linear_extrapolation":
-            plt.title(f'DAC Parameters ({self.start_index}, {self.end_index}) Extrapolated with {self.interpolate_value} Intermediate Integer Values')
-
-        if not self.interpolate_value:
-
-            ax.plot(self.wl, self.fm, 'o--', ms=0.85, linewidth=0.5, label=f"FM")
-            ax.plot(self.wl, self.bm, 'o--', ms=0.85, linewidth=0.5, label=f"BM")
-            ax.plot(self.wl, self.ph, 'o--', ms=0.85, linewidth=0.5, label=f"PH")
-            ax.plot(self.wl, self.soa, 'o--', ms=0.85, linewidth=0.5, label=f"SOA")
-
-        plt.xlabel('Wavelength')
-        plt.ylabel("DAC Value")
-        plt.legend()
-
-        if self.interpolate_type == "true_linear":
-            plt.savefig(CWD+f'/Plots/True_Linear_({self.interpolate_value}, {self.start_index}, {self.end_index}).pdf', format='pdf')
-
-        if self.interpolate_type == "linear_extrapolation":
-            plt.savefig(CWD+f'/Plots/Linear_Extrapolation_({self.interpolate_value}, {self.start_index}, {self.end_index}).pdf', format='pdf')
-
-        if self.interpolate_type == "line_fit":
-            plt.savefig(CWD+f'/Plots/Line_Fit_({self.interpolate_value}, {self.start_index}, {self.end_index}).pdf', format='pdf')
-
-        plt.show()
-
     def _linear_interpolate(self) -> str:
         '''
         Takes controller values from DAC table and linearly interpolates new DAC values. Saves new values to self.r_[controller_name]. Also generates new DAC table with new values.
@@ -384,11 +341,11 @@ class DAC_Table:
 
         return self._write_DAC_table()
 
-    def generate_DAC_table(self, interpolate_type: str = "true_linear", start_index:int = 0, end_index:int = 9999) -> str:
+    def generate_DAC_table(self, interpolate_type: str = "true_linear") -> str:
         '''
         Generates new DAC table and outputs the path to the new table.
         '''
-        DAC_arrays = self.get_DAC_arrays(DAC_TABLE_PATH, apply_bounds=True) #this is what narrows down what we are interpolating between
+        DAC_arrays = self.get_DAC_arrays(DAC_TABLE_PATH, apply_bounds=True) #applies bounds to default DAC LUT.
         self.update_DAC_values(DAC_arrays)
 
         if interpolate_type == "true_linear": 
@@ -440,8 +397,4 @@ class DAC_Table:
 
             plt.show()
         pass
-    #generate_DAC_table(interpolate_val=3, start_index=400, end_index=450)
-
-    #generate_DAC_table(interpolate_type = "linear", interpolate_val = 0, start_index=5000, end_index=6000, plot=True)
-
-    #visualize_parameters()
+    

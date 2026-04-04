@@ -27,8 +27,8 @@ class GUI_Controller:
         self.log_voltage = True
 
         #  scan parameters for DBR object init
-        self.start_index = 0 
-        self.end_index = 9999
+        self.start_wl = 1627.5
+        self.end_wl = 1672.4955
         self.interpolation_type = "true_linear"
         self.interpolation_value = 0
         self.sending_packets = True
@@ -69,8 +69,8 @@ class GUI_Controller:
             print(f"No Laser Serial Port Setup yet")
             self.Laser = dbr.DBR_Spectrometer(
                 port_name = self.default_port_name,
-                start_index = self.start_index, 
-                end_index = self.end_index,
+                start_wl = self.start_wl, 
+                end_wl = self.end_wl,
                 interpolation_type = self.interpolation_type, 
                 interpolation_value = self.interpolation_value, 
                 saving_LUT = self.saving_LUT)
@@ -81,8 +81,8 @@ class GUI_Controller:
 
         self.Laser = dbr.DBR_Spectrometer(
                 port_name = self.default_port_name,
-                start_index = self.start_index, 
-                end_index = self.end_index,
+                start_wl = self.start_wl, 
+                end_wl = self.end_wl,
                 interpolation_type = self.interpolation_type, 
                 interpolation_value = self.interpolation_value, 
                 saving_LUT = self.saving_LUT, #if False, Laser.get_table() will delete LUT in /DAC_Tables/* after updating self.DAC_list
@@ -129,13 +129,13 @@ class GUI_Controller:
         
         if self.logger_on: 
             self.logger.log("Laser Enabled")
-            self.logger.log(f"Voltage: {self.Laser.read_voltage()}")
+            self.logger.log(f"Voltage: {self.read_voltage_1_()}")
     
     def disable_laser(self):
         self.Laser.disable()
         if self.logger_on: 
             self.logger.log("Laser Disabled")
-            self.logger.log(f"Voltage: {self.Laser.read_voltage()}")
+            self.logger.log(f"Voltage: {self.read_voltage_1_()}")
 
 
     def read_voltage_1_(self) -> float:
@@ -165,32 +165,60 @@ class GUI_Controller:
             self.disconnect_from_voltmeter()
 
 
+    def add_manual_to_voltage_plot(self):
 
+        data1 = [[1650.9495,1.635],
+                [1650.954,1.325],
+                [1650.9585,1.959],
+                [1650.963,4.395],
+                [1650.9675,3.116],
+                [1650.972,1.588],
+                [1650.9765,1.324],
+                [1650.981,2.004],
+                [1650.9855,4.081],
+                [1650.99,3.23],
+                [1650.9945,1.537],
+                [1650.999,1.359],
+                [1651.0035,2.111]]
+        data2 = [[5204,7138,7776,9282,19374,1650.918,3.8],
+                [5205,7138,7776,9136,19313,1650.9225,1.9],
+                [5206,7138,7776,8992,19259,1650.927,1.3],
+                [5207,7138,7776,8850,19221,1650.9315,1.5],
+                [5208,7138,7776,8706,19163,1650.936,2.3],
+                [5209,7138,7776,8552,19132,1650.9405,4.1],
+                [5210,7138,7776,8408,19094,1650.945,3.5],
+                [5211,7138,7776,8274,19055,1650.9495,2.0],
+                [5212,7138,7776,8130,19004,1650.954,1.4],
+                [5213,7138,7776,7984,18964,1650.9585,1.4],
+                [5214,6964,7568,8482,19159,1650.963,2.6],
+                [5215,6964,7568,8370,19134,1650.9675,4.1],
+                [5216,6964,7568,8242,19117,1650.972,3.6],
+                [5217,6964,7568,8112,19086,1650.9765,1.9],
+                [5218,6964,7568,7968,19047,1650.981,1.3],
+                [5219,6964,7568,7842,19020,1650.9855,1.4],
+                [5220,6964,7568,7714,18987,1650.99,2.4],
+                [5221,6964,7568,7560,18943,1650.9945,4.4],
+                [5222,6964,7568,7432,18926,1650.999,2.7],
+                [5223,6964,7568,7314,18908,1651.0035,1.5]]
+        
+        wl_list_1 = []
+        new_voltage_1_list_1 = []
+        self.add_voltage_1_series()
+        
+        for row in data1:
+            wl_list_1.append(row[0])
+            new_voltage_1_list_1.append(row[-1])
+        dpg.configure_item(f'v_1_data_{self._num_voltage_1_series}', x=wl_list_1, y=new_voltage_1_list_1)
 
+        wl_list = []
+        new_voltage_1_list = []
+        self.add_voltage_1_series()
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        for row in data2:
+            wl_list.append(row[5])
+            new_voltage_1_list.append(row[-1])
+        dpg.configure_item(f'v_1_data_{self._num_voltage_1_series}', x=wl_list, y=new_voltage_1_list)
+            
     def _scan(self):
         self.logger.log("Starting Scan")
         packets = self.Laser.make_packets_list(self.DAC_list)
@@ -284,35 +312,19 @@ class GUI_Controller:
         #if sender != "delay_slider":
         if self.logger_on: self.logger.log(f"Settle Delay: {self.settle_delay}")
 
-    def update_start_index(self, sender, data:str):
-        self.start_index = data
-        if self.logger_on: self.logger.log(f"Start Index = {data}")
-    
-    def update_end_index(self, sender, data:str):
-        self.end_index = data
-        if self.logger_on: self.logger.log(f"End Index = {data}")
-
     def update_start_wavelength(self, sender, data:float):
-        wl_list = self.DAC_list[-1]
-        closest_wavelength = min(wl_list, key=lambda x:abs(x-data))
-        wl_index = wl_list.index(closest_wavelength)
-        if self.logger_on: self.logger.log(f"Start WL = {closest_wavelength}")
-        self.start_index = wl_index
-        if self.logger_on: self.logger.log(f"Start Index = {self.start_index}")
+        self.start_wl = data
+        if self.logger_on: self.logger.log(f"Start Index = {self.start_wl}")
 
     def update_end_wavelength(self, sender, data:float):
-        wl_list = self.DAC_list[-1]
-        closest_wavelength = min(wl_list, key=lambda x:abs(x-data))
-        wl_index = wl_list.index(closest_wavelength)
-        if self.logger_on: self.logger.log(f"End WL = {closest_wavelength}")
-        self.end_index = wl_index
-        if self.logger_on: self.logger.log(f"End Index = {self.end_index}")
+        self.end_wl = data
+        if self.logger_on: self.logger.log(f"End Index = {self.end_wl}")
 
     def toggle_debug(self, sender, data:str):
         self.debug = bool(data)
         if self.logger_on: self.logger.log(f"Debug = {self.debug}")
 
-    def toggle_log_on(self, sender, data:str):
+    def toggle_logger_on(self, sender, data:str):
         self.logger_on = bool(data)
         self.logger.log(f"Log Outputs = {self.logger_on}")
 
@@ -682,6 +694,8 @@ class GUI_Controller:
                 debug_button = dpg.add_checkbox(label="Debug Mode", default_value=self.debug, callback=self.toggle_debug, tag="voltage_config_toggle_debug_button")
                 logger_button = dpg.add_checkbox(label="Log Output", default_value=True, callback=self.toggle_logger_on, tag="voltage_config_toggle_logger_button")
                 voltage_button = dpg.add_checkbox(label="Read Voltage", default_value=self.log_voltage, callback=self.toggle_log_voltage, tag="voltage_config_toggle_log_voltage_button")
+                add_manual = dpg.add_button(label="Add Manual Voltages",width=config_width-16,callback=self.add_manual_to_voltage_plot)
+                
                 dpg.add_separator()
                 dpg.add_spacer(height=self.window_buffer_size)
                 enable_laser_button = dpg.add_button(label="Enable Laser", width=config_width-16, callback=self.enable_laser)
@@ -719,7 +733,7 @@ class GUI_Controller:
                 tag="laser_config_window") as laser_config_window:
                 
                 debug_button = dpg.add_checkbox(label="Debug Mode", default_value=self.debug, callback=self.toggle_debug)
-                logger_button = dpg.add_checkbox(label="Log Output", default_value=True, callback=self.toggle_log_on)
+                logger_button = dpg.add_checkbox(label="Log Output", default_value=True, callback=self.toggle_logger_on)
                 voltage_button = dpg.add_checkbox(label="Read Voltage", default_value=self.log_voltage, callback=self.toggle_log_voltage)
                 save_tables_button = dpg.add_checkbox(label="Save LUT", default_value=self.saving_LUT, callback=self.toggle_save_LUT)
                 dpg.add_separator()

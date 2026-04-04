@@ -14,15 +14,15 @@ import ctypes
 class DBR_Spectrometer:
     def __init__(self, 
         port_name:str = "COM4", 
-        start_index: int = 0, 
-        end_index: int = 9999, 
+        start_wl: float = 1627.5, 
+        end_wl: float = 1672.4955, 
         interpolation_type: str = "true_linear", 
         interpolation_value:int = 3,
         saving_LUT: bool = True, 
         **port):
         
-        self.start_index = start_index
-        self.end_index = end_index
+        self.start_wl = start_wl
+        self.end_wl = end_wl
         self.interpolation_type = interpolation_type
         self.interpolation_value = interpolation_value
         self.saving_LUT = saving_LUT
@@ -247,17 +247,17 @@ class DBR_Spectrometer:
         logger_message = ''
 
         if self.interpolation_type == "true_linear": 
-            table_list = glob.glob(f'**/DAC_Tables/True_Linear_{self.interpolation_value, self.start_index, self.end_index}.csv', recursive=True)
+            table_list = glob.glob(f'**/DAC_Tables/True_Linear_{self.interpolation_value, self.start_wl, self.end_wl}.csv', recursive=True)
             print("FETCH TRUE LINEAR")
             print(table_list)
 
         if self.interpolation_type == "linear_extrapolation": 
-            table_list = glob.glob(f'**/DAC_Tables/Linear_Extrapolation_{self.interpolation_value, self.start_index, self.end_index}.csv', recursive=True)
+            table_list = glob.glob(f'**/DAC_Tables/Linear_Extrapolation_{self.interpolation_value, self.start_wl, self.end_wl}.csv', recursive=True)
             print("FETCH LINEAR EXTRAPOLATION")
             print(table_list)
 
         if self.interpolation_type == "line_fit": 
-            table_list = glob.glob(f'**/DAC_Tables/Line_Fit_{self.interpolation_value, self.start_index, self.end_index}.csv', recursive=True)
+            table_list = glob.glob(f'**/DAC_Tables/Line_Fit_{self.interpolation_value, self.start_wl, self.end_wl}.csv', recursive=True)
             print("FETCH LINE FIT")
             print(table_list)
             
@@ -266,7 +266,7 @@ class DBR_Spectrometer:
         except: 
             self.DAC_Table = table.DAC_Table(
                 interpolate_type=self.interpolation_type, interpolate_value=self.interpolation_value, 
-                start_index=self.start_index, end_index=self.end_index)
+                start_wl=self.start_wl, end_wl=self.end_wl)
 
         if not table_list:
             path = self.DAC_Table.generate_DAC_table(interpolate_type=self.interpolation_type) #also plots if enabled
