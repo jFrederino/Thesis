@@ -62,6 +62,8 @@ Channel 1 works as previously built voltmeter inst. still need to rework dependi
 
 # TO-DO LIST 
 
+## CATMULL-ROM SPLINE INTERPOLATION!!
+
 ## Repeated Scan Methods
 Should be able to batch scans with same parameters for analysis. (example given was 50 scans) :O
 

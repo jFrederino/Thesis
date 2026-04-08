@@ -53,11 +53,16 @@ class GUI_Controller:
         self._num_voltage_1_series = 0
         self._num_voltage_2_series = 0
         self.voltage_1_data: list[tuple] = []
+        self.voltage_2_data: list[tuple] = []
         self.DAC_list = [[],[],[],[],[],[]]
         
         # FP4029 Serial Communication parameters
         self.default_port_name = "COM4"
         self.port_name = "COM4"
+
+        # Voltmeter pyvisa communication parameters
+        self.default_voltmeter_1_connection = "USB0::0x2A8D::0x1601::MY60077980::INSTR"
+        self.default_voltmeter_2_connection = "USB0::0x2A8D::0x1601::MY60077980::INSTR"
 
         dpg.create_context()
         matplotlib.use('Agg')
@@ -139,23 +144,42 @@ class GUI_Controller:
 
 
     def read_voltage_1_(self) -> float:
-        '''
-        Measures voltage via connected Voltmeter
-        '''
-        try: self._voltmeter_inst
+        try: self._voltmeter_inst_1
         except: 
-            self.connect_to_voltmeter()
+            self.connect_to_voltmeter(sender="volt_com_1", data=self.default_voltmeter_1_connection)
 
-        return float(self._voltmeter_inst.query("MEAS:VOLT:DC? 10,0.001"))
+        return float(self._voltmeter_inst_1.query("MEAS:VOLT:DC? 10,0.001"))
     
-    def connect_to_voltmeter(self):
-        rm = pyvisa.ResourceManager()
-        print(rm.list_resources())
-        choice = "USB0::0x2A8D::0x1601::MY60077980::INSTR"
-        self._voltmeter_inst = rm.open_resource(choice)
+    def read_voltage_2_(self) -> float:
+        try: self._voltmeter_inst_2
+        except: 
+            self.connect_to_voltmeter(sender="volt_com_2", data=self.default_voltmeter_2_connection)
 
-        print(self._voltmeter_inst.query("*IDN?"))
-        print(self._voltmeter_inst.query("MEAS:VOLT:DC? 10,0.001"))
+        return float(self._voltmeter_inst_2.query("MEAS:VOLT:DC? 10,0.001"))
+
+    def connect_to_voltmeter(self, sender, data):
+        channel = 1
+        match sender:
+            case "volt_com_1": channel = 1
+            case "volt_com_2": channel = 2
+        try:
+            if channel == 1: print(self._voltmeter_inst_1)
+            if channel == 2: print(self._voltmeter_inst_2)
+        except:
+            if self.logger_on: self.logger.log(f"Connecting to Voltmeter channel {channel} : {data}")
+            try:
+                if channel == 1:
+                    self._voltmeter_inst_1 = self.voltmeter_resource_manager.open_resource(data)
+                    self.logger.log(f"Voltmeter IDN: {self._voltmeter_inst_1.query("*IDN?")}")
+                    self.logger.log(f"V_1 = {self._voltmeter_inst_1.query("MEAS:VOLT:DC? 10,0.001")}")
+                if channel == 2: 
+                    self._voltmeter_inst_2 = self.voltmeter_resource_manager.open_resource(data)
+                    self.logger.log(f"Voltmeter IDN: {self._voltmeter_inst_2.query("*IDN?")}")
+                    self.logger.log(f"V_2 = {self._voltmeter_inst_2.query("MEAS:VOLT:DC? 10,0.001")}")
+            except:
+                self.logger.log_error(f"Pyvisa cannot connect to Device: {data}")
+                return
+        
 
     def disconnect_from_voltmeter(self):
         try: 
@@ -227,8 +251,11 @@ class GUI_Controller:
 
         wl_target_list = []
         self.add_voltage_1_series()
+        self.add_voltage_2_series()
         self.voltage_1_data: list[tuple] = []
+        self.voltage_2_data: list[tuple] = []
         new_voltage_1_list = []
+        new_voltage_2_list = []
 
         #create New Voltage series for plot
     
@@ -265,18 +292,25 @@ class GUI_Controller:
                     if self.logger_on: self.logger.log_info(logger_message)
                     
                 if self.log_voltage: 
-                    if self.debug: new_voltage_1 = random.randrange(-5000,5000) / 1000
+                    if self.debug: 
+                        new_voltage_1 = random.randrange(-5000,5000) / 1000
+                        new_voltage_2 = random.randrange(-5000,5000) / 1000
                     else: 
                         try:
                             time.sleep(self.settle_delay)
                             new_voltage_1 = self.read_voltage_1_()
+                            new_voltage_2 = self.read_voltage_2_()
                         except: self.logger.log_error("Voltmeter Read Error")
                     new_voltage_1_list.append(new_voltage_1)
+                    new_voltage_2_list.append(new_voltage_2)
 
                     self.voltage_1_data.append((target_wl, new_voltage_1))
+                    self.voltage_2_data.append((target_wl, new_voltage_2))
 
                     dpg.configure_item(f'v_1_data_{self._num_voltage_1_series}', x=wl_target_list, y=new_voltage_1_list)
-                    self.logger.log_info(f"V_1 = ({target_wl}, {new_voltage_1})" + "\n" + "-"*60)
+                    dpg.configure_item(f'v_2_data_{self._num_voltage_2_series}', x=wl_target_list, y=new_voltage_2_list)
+                    
+                    self.logger.log_info(f"V_1 = ({target_wl}, {new_voltage_1})" + "\n"+ "V_2 = ({target_wl}, {new_voltage_2})" + "\n" + "-"*60)
                     
             time.sleep(self.packet_delay)
         
@@ -492,10 +526,12 @@ class GUI_Controller:
             self.voltage_plots_unlocked = True
             if self.logger_on: self.logger.log("Voltage Plot View Unlocked")
             dpg.set_axis_limits_auto(axis='V_1_xaxis')
+            dpg.set_axis_limits_auto(axis='V_2_xaxis')
             dpg.set_item_label("voltage_config_unlock_plot_button", "Lock Plots")
         else:
             self.voltage_plots_unlocked = False
             dpg.set_axis_limits(axis='V_1_xaxis', ymin=1627, ymax=1673)
+            dpg.set_axis_limits(axis='V_2_xaxis', ymin=1627, ymax=1673)
 
             if self.logger_on: self.logger.log("Voltage Plot View Locked")
             dpg.set_item_label("voltage_config_unlock_plot_button", "Unlock Plots")
@@ -695,9 +731,20 @@ class GUI_Controller:
                 logger_button = dpg.add_checkbox(label="Log Output", default_value=True, callback=self.toggle_logger_on, tag="voltage_config_toggle_logger_button")
                 voltage_button = dpg.add_checkbox(label="Read Voltage", default_value=self.log_voltage, callback=self.toggle_log_voltage, tag="voltage_config_toggle_log_voltage_button")
                 add_manual = dpg.add_button(label="Add Manual Voltages",width=config_width-16,callback=self.add_manual_to_voltage_plot)
-                
                 dpg.add_separator()
                 dpg.add_spacer(height=self.window_buffer_size)
+
+                self.voltmeter_resource_manager = pyvisa.ResourceManager()
+                voltmeter_resource_list = self.voltmeter_resource_manager.list_resources()
+                dpg.add_text("Voltage Channel 1 Resource ")
+                voltmeter_connection_display_1 = dpg.add_combo(voltmeter_resource_list, width=config_width-16, default_value=self.default_voltmeter_1_connection, callback=self.connect_to_voltmeter,tag="volt_com_1")
+
+                dpg.add_text("Voltage Channel 2 Resource ")
+                voltmeter_connection_display_2 = dpg.add_combo(voltmeter_resource_list, width=config_width-16, default_value=self.default_voltmeter_2_connection, callback=self.connect_to_voltmeter, tag="volt_com_2")
+
+                dpg.add_separator()
+                dpg.add_spacer(height=self.window_buffer_size)
+
                 enable_laser_button = dpg.add_button(label="Enable Laser", width=config_width-16, callback=self.enable_laser)
                 disable_laser_button = dpg.add_button(label="Disable Laser", width=config_width-16, callback=self.disable_laser)
                 dpg.add_separator()
