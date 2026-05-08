@@ -62,6 +62,8 @@ Channel 1 works as previously built voltmeter inst. still need to rework dependi
 
 # TO-DO LIST 
 
+## CATMULL-ROM SPLINE INTERPOLATION!!
+
 ## Repeated Scan Methods
 Should be able to batch scans with same parameters for analysis. (example given was 50 scans) :O
 
@@ -76,18 +78,8 @@ Using the 'glorified block of glass' (destructive interferance precision wavemet
 
 ## The GUI Side Quest
 
-#### Logger window management
-Keeps not focusing no matter what I do to try to fix it. Probably a primary window child/class method scope issue. 
-
-#### Config For Laser and Voltmeters should be seperate windows.
-Reorganize based on new tab layout. maybe Laser Config and Voltage Data Config tabs
-This also means methods for setting up two seperate voltmeter instances and communication protocols.
-
 #### GUI DAC Table Highlight
 The GUI should display the current values (and the previous values) being packaged and sent to the Laser. This should help check consistency between the DBR program sanatization and the DAC table in real time.
-
-#### GUI File manangement and Plots
-The GUI should have the option to both load outside DAC tables, as well as choose to store tables once the scan is completed or not (to save space), same thing goes for plots.
 
 #### Voltage Plot drag lines for bounds to export via matplotlib.
 Should be able to specify bounds and other features of exported plots from GUI. Drag lines could be neat. 
@@ -95,29 +87,11 @@ Should be able to specify bounds and other features of exported plots from GUI. 
 #### GUI configuration saves (plus saving DAC tables)
 Project files should be loadable and saveable that hold all the configuration data for a given laser scan/protocol. that way, the data collected can be saved with a config file that allows for repeatability and debugging
 
-
 ## Packaging of DBR python utility
 The final product should be managed as a python package and include both Command Line functionality and GUI functionality. This may also include building the program as an exe and hosting that on the github. 
 
 ## Updated Documentation & MANUAL
 The github should include example snippets and documentation of the process and code timing as will be documented in the Thesis writeup (this should help with writing in general)
-
-## Thesis Writing
-
-#### Introduction
-Motivation for research and structure of paper established: See abstract for ideas.
-
-#### Theory
-This includes a background in some relevant parts of laser spectroscopy, as well as a simplified model of how a laser works. 
-
-#### Method
-This will be the bulk of the documentation for the actual laser control system. including figures like program flow charts, code timing charts, and images of the apparatus. This should also include some of the process and problems solved over the course of the Thesis work. 
-
-#### Analysis
-This will include analysis on the actual functionality of the laser; data on the feasability of interpolation methods, on the accuracy and precision of the generated laser, and its use in laser spectroscopy. This includes any measurements taken of actual methane samples in the future as well.
-
-#### Conclusion
-Restating the introduction with concluding statments driven by the analysis and discsussion of future work.
 
 
 

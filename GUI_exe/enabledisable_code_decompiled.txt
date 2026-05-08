@@ -74,7 +74,7 @@ private byte[] FormatMessage(byte RegNum, ushort data, bool write)
     {
         array[0] = RegNum;
     }
-    array[1] = (byte)(data >> 8);
+    array[1] = (byte)(data >> 8); 
     array[2] = (byte)data;
     array[3] = 0;
     return array;
