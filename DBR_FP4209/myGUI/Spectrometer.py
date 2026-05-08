@@ -148,7 +148,12 @@ class DBR_Spectrometer:
             self.read_response()
 
     def set_laser_target_via_packets(self, fm_packet, bm_packet, ph_packet, soa_packet):
-        packets = [fm_packet, bm_packet, ph_packet, soa_packet]
+        #packets = [fm_packet, bm_packet, ph_packet, soa_packet]
+        #packets = [bm_packet, fm_packet, ph_packet, soa_packet]
+        #packets = [ph_packet, fm_packet, bm_packet, soa_packet]
+        packets = [ph_packet, bm_packet, fm_packet, soa_packet]
+        
+
         responses = []
         for packet in packets:
             self._laser_serial.write(packet)
