@@ -68,7 +68,7 @@ private byte[] FormatMessage(byte RegNum, ushort data, bool write)
     byte[] array = new byte[4];
     if (write)
     {
-        array[0] = (byte)(RegNum | 0x80);
+  
     }
     else
     {
@@ -84,3 +84,42 @@ public void WriteRegister(byte RegNum, ushort RegData)
 {
     MessageExchange(FormatMessage(RegNum, RegData, write: true));
 }
+
+
+Equivalent Python?
+
+
+
+import serial
+
+# Assuming 'port' is an instance of serial.Serial
+# e.g., port = serial.Serial('COM3', 9600)
+
+def message_exchange(command):
+    # Send the 4-byte command
+    port.write(command)
+    
+    # port.read(4) automatically waits until 4 bytes are received
+    # (equivalent to your while loop and manual byte reading)
+    response = port.read(4)
+    
+    # Return as a bytearray or list of bytes
+    return list(response)
+
+def format_message(reg_num, data, write):
+    array = bytearray(4)
+    
+    if write:
+        array[0] = (reg_num | 0x80) & 0xFF #puts a 1 in the first bit of the packet. 
+    else:
+        array[0] = reg_num & 0xFF
+        
+    array[1] = (data >> 8) & 0xFF  # High byte
+    array[2] = data & 0xFF         # Low byte
+    array[3] = 0
+    
+    return array
+
+def write_register(reg_num, reg_data):
+    message_exchange(format_message(reg_num, reg_data, write=True))
+

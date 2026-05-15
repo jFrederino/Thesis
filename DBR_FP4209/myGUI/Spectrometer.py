@@ -87,6 +87,62 @@ class DBR_Spectrometer:
         self._default_serial_port = port_name
         print(f"Default Serial Port set to: {self._default_serial_port}")
 
+
+
+    def message_exchange(self, command):
+        # Send the 4-byte command
+        self._laser_serial.write(command)
+
+        response = self.read_response()
+        return response
+
+    def format_message(self, reg_num, data, write):
+        array = bytearray(4) #MUTABLE!!
+        
+        if write:
+            array[0] = (reg_num | 0x80) & 0xFF
+        else:
+            array[0] = reg_num & 0xFF
+            
+        array[1] = (data >> 8) & 0xFF  # High byte
+        array[2] = data & 0xFF         # Low byte
+        array[3] = 0
+        
+        return array
+
+    def write_register(self, reg_num, reg_data):
+        self.message_exchange(self.format_message(reg_num, reg_data, write=True))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     def make_packet(self, DAC_type:str, value:int) -> bytes:
         '''
         Creates DAC packet (bytes object) that can be sent to the Laser immediately. Also sanatizes given values
@@ -114,13 +170,36 @@ class DBR_Spectrometer:
         if value < minimum: raise Exception(f"{DAC_type} DAC value outside of acceptable range: {value} < {minimum}" )
 
         msb, lsb = self.val_to_split_hex(value)
-
-        return bytes([register, int(msb, 16), int(lsb, 16), 0x00])
+        intended = [register, msb, lsb, 0x00]
+        res = bytes([register, int(msb, 16), int(lsb, 16), 0x00])
+        check = list(res)
+        new_check = [check[0], hex(check[1]), hex(check[2]), check[3]]
+        #print(check)
+        
+        
+        #print(int.from_bytes(res))
+        new_packet = self.format_message(regnum=register, data=value, write=True)
     
+
+
+
+        return res 
+    
+
+    def get_duplicates(self, data:list):
+        from collections import Counter
+        # Convert sublists to tuples to make them hashable
+        counts = Counter(tuple(x) for x in data)
+
+        # List only the items that appear more than once
+        duplicates = [list(item) for item, count in counts.items() if count > 1]
+        return duplicates
+
     def make_packets_list(self, DAC_list:list[list]) -> list[list]:
         '''
         Given DAC LUT will produce list containing all cooresponding packets, bundled with Target Wavelengths.
         '''
+        
         packets = []
         for i in range(len(DAC_list[0])):
             fm_packet = self.make_packet("FM", DAC_list[1][i])
@@ -131,6 +210,7 @@ class DBR_Spectrometer:
 
             packets.append([fm_packet, bm_packet, ph_packet, soa_packet, target_wl])
 
+        #print(self.get_duplicates(packets)) No duplicates.
         return packets
 
     def set_laser_target(self, fm_val:int, bm_val:int, ph_val:int, soa_val:int):

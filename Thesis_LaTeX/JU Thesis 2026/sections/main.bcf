@@ -2372,7 +2372,17 @@
     <bcf:datasource type="file" datatype="bibtex" glob="false">biblio.bib</bcf:datasource>
   </bcf:bibdata>
   <bcf:section number="0">
-    <bcf:citekey order="1" intorder="1">chang2006</bcf:citekey>
+    <bcf:citekey order="1" intorder="1">Zatorska2023_near_infrared_HITRAN</bcf:citekey>
+    <bcf:citekey order="2" intorder="1">Shemshad2012_overlapping_absorption_peaks_figure</bcf:citekey>
+    <bcf:citekey order="3" intorder="1">Hodgson2005</bcf:citekey>
+    <bcf:citekey order="4" intorder="1">FPI_angle_precision_requirement</bcf:citekey>
+    <bcf:citekey order="5" intorder="1">FPI_Transmission_Peaks_figure</bcf:citekey>
+    <bcf:citekey order="6" intorder="1">gain_curve_figure</bcf:citekey>
+    <bcf:citekey order="7" intorder="1">Long2022_spectral_line_shapes</bcf:citekey>
+    <bcf:citekey order="8" intorder="1">Hanson_Spearrin_Goldenstein_2016</bcf:citekey>
+    <bcf:citekey order="9" intorder="1">Vilas2012_beer_model_and_pressure_effects</bcf:citekey>
+    <bcf:citekey order="10" intorder="1">Delahaye2016_MERLIN</bcf:citekey>
+    <bcf:citekey order="11" intorder="1">Delahaye2019_MERLIN_pressure_broadening</bcf:citekey>
   </bcf:section>
   <!-- SORTING TEMPLATES -->
   <bcf:sortingtemplate name="nty">

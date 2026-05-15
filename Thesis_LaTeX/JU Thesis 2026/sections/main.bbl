@@ -19,47 +19,510 @@
 
 \refsection{0}
   \datalist[entry]{nty/global//global/global/global}
-    \entry{chang2006}{article}{}{}
-      \name{author}{4}{}{%
-        {{hash=eb4dded13edbd82a818650b29378b89e}{%
-           family={Chang},
-           familyi={C\bibinitperiod},
-           given={D.E.},
-           giveni={D\bibinitperiod}}}%
-        {{hash=3cc5c097a05c52c425f283c801d9468b}{%
-           family={Sørensen},
-           familyi={S\bibinitperiod},
-           given={A.S.},
-           giveni={A\bibinitperiod}}}%
-        {{hash=9dbacbb44e924d485d0987e3f7420add}{%
-           family={Hemmer},
-           familyi={H\bibinitperiod},
-           given={P.R.},
-           giveni={P\bibinitperiod}}}%
-        {{hash=152c9d776244752eaba344fc6d7d8f91}{%
-           family={Lukin},
-           familyi={L\bibinitperiod},
-           given={M.D.},
-           giveni={M\bibinitperiod}}}%
+    \entry{gain_curve_figure}{misc}{}{}
+      \name{author}{1}{}{%
+        {{hash=0269dc3bbded0aa249d7033b149619ab}{%
+           family={Arieli},
+           familyi={A\bibinitperiod},
+           given={Rami},
+           giveni={R\bibinitperiod}}}%
       }
-      \strng{namehash}{65bd690cdca069281072ea288afeeaef}
-      \strng{fullhash}{c05365fef3b561d6b96a726bb3533557}
-      \strng{fullhashraw}{c05365fef3b561d6b96a726bb3533557}
-      \strng{bibnamehash}{65bd690cdca069281072ea288afeeaef}
-      \strng{authorbibnamehash}{65bd690cdca069281072ea288afeeaef}
-      \strng{authornamehash}{65bd690cdca069281072ea288afeeaef}
-      \strng{authorfullhash}{c05365fef3b561d6b96a726bb3533557}
-      \strng{authorfullhashraw}{c05365fef3b561d6b96a726bb3533557}
-      \field{sortinit}{C}
-      \field{sortinithash}{4d103a86280481745c9c897c925753c0}
+      \strng{namehash}{0269dc3bbded0aa249d7033b149619ab}
+      \strng{fullhash}{0269dc3bbded0aa249d7033b149619ab}
+      \strng{fullhashraw}{0269dc3bbded0aa249d7033b149619ab}
+      \strng{bibnamehash}{0269dc3bbded0aa249d7033b149619ab}
+      \strng{authorbibnamehash}{0269dc3bbded0aa249d7033b149619ab}
+      \strng{authornamehash}{0269dc3bbded0aa249d7033b149619ab}
+      \strng{authorfullhash}{0269dc3bbded0aa249d7033b149619ab}
+      \strng{authorfullhashraw}{0269dc3bbded0aa249d7033b149619ab}
+      \field{sortinit}{A}
+      \field{sortinithash}{2f401846e2029bad6b3ecc16d50031e2}
       \field{labelnamesource}{author}
       \field{labeltitlesource}{title}
-      \field{journaltitle}{Physical Review Letters}
-      \field{title}{Quantum optics with surface plasmons}
-      \field{volume}{97}
-      \field{year}{2006}
-      \field{pages}{053002}
+      \field{title}{Rami Arieli: “The Laser Adventure,”}
+      \verb{urlraw}
+      \verb https://perg.phys.ksu.edu/vqm/laserweb/ch-5/f5s1p5.htm
+      \endverb
+      \verb{url}
+      \verb https://perg.phys.ksu.edu/vqm/laserweb/ch-5/f5s1p5.htm
+      \endverb
+    \endentry
+    \entry{Delahaye2019_MERLIN_pressure_broadening}{article}{}{}
+      \name{author}{6}{}{%
+        {{hash=3e5b6c040ee47a27e941e4ff0cad789c}{%
+           family={Delahaye},
+           familyi={D\bibinitperiod},
+           given={T.},
+           giveni={T\bibinitperiod}}}%
+        {{hash=0530412954fccc101def9ed703fb17cb}{%
+           family={Ghysels},
+           familyi={G\bibinitperiod},
+           given={M.},
+           giveni={M\bibinitperiod}}}%
+        {{hash=eacab4c60295d7ee7b03fac393989ac5}{%
+           family={Hodges},
+           familyi={H\bibinitperiod},
+           given={J.\bibnamedelimi T.},
+           giveni={J\bibinitperiod\bibinitdelim T\bibinitperiod}}}%
+        {{hash=17a9f03e3cb10eab91b98134975c6de5}{%
+           family={Sung},
+           familyi={S\bibinitperiod},
+           given={K.},
+           giveni={K\bibinitperiod}}}%
+        {{hash=0832899d4b69a7ee0b5eca5ab889addd}{%
+           family={Armante},
+           familyi={A\bibinitperiod},
+           given={R.},
+           giveni={R\bibinitperiod}}}%
+        {{hash=cfdba62f6937f78a261bc531b851b8d3}{%
+           family={Tran},
+           familyi={T\bibinitperiod},
+           given={H.},
+           giveni={H\bibinitperiod}}}%
+      }
+      \strng{namehash}{e51c962b492d997862745fadc2c2c4db}
+      \strng{fullhash}{f4909b0593abb9b3270f78dac76e1f45}
+      \strng{fullhashraw}{f4909b0593abb9b3270f78dac76e1f45}
+      \strng{bibnamehash}{e51c962b492d997862745fadc2c2c4db}
+      \strng{authorbibnamehash}{e51c962b492d997862745fadc2c2c4db}
+      \strng{authornamehash}{e51c962b492d997862745fadc2c2c4db}
+      \strng{authorfullhash}{f4909b0593abb9b3270f78dac76e1f45}
+      \strng{authorfullhashraw}{f4909b0593abb9b3270f78dac76e1f45}
+      \field{extraname}{1}
+      \field{sortinit}{D}
+      \field{sortinithash}{6f385f66841fb5e82009dc833c761848}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{abstract}{Abstract The ability to precisely model methane absorption in the R(6) manifold of the 2ν3 band at atmospheric pressure and temperature conditions is a key technical requirement of the German-French, Methane Remote Sensing Lidar (MERLIN) space mission. To this end, 27 high-resolution and high-signal-to-noise-ratio absorption spectra of air-broadened 12CH4 were recorded using a variable-temperature frequency-stabilized cavity ring-down spectroscopy apparatus. The measurement conditions corresponded to sample temperature, pressure, and methane molar fraction values spanning 220–290 K, 4–110 kPa, and 4–7 μmol/mol, respectively. The measured spectra were fit using the sum of isolated Hartmann-Tran profiles with the addition of line mixing. For each line within the manifold, all spectroscopic parameters at room temperature were fixed to our previously obtained values (Delahaye et al., 2016, https://doi.org/10.1002/2015JD024524) and only the temperature dependences of the model parameters were adjusted. The results show that the fitted model agrees with the measured methane absorption to better than 0.3\% for the entire R(6) manifold spectral region and to within 0.1\% at the online position of the MERLIN for all considered pressure and temperature conditions. A first comparison with ground-based atmospheric measurement was also made showing significant improvement with respect to existing spectroscopic modeling of methane absorption.}
+      \field{journaltitle}{Journal of Geophysical Research: Atmospheres}
+      \field{number}{6}
+      \field{title}{Measurement and Modeling of Air-Broadened Methane Absorption in the MERLIN Spectral Region at Low Temperatures}
+      \field{volume}{124}
+      \field{year}{2019}
+      \field{pages}{3556\bibrangedash 3564}
+      \range{pages}{9}
+      \verb{doi}
+      \verb https://doi.org/10.1029/2018JD028917
+      \endverb
+      \verb{eprint}
+      \verb https://agupubs.onlinelibrary.wiley.com/doi/pdf/10.1029/2018JD028917
+      \endverb
+      \verb{urlraw}
+      \verb https://agupubs.onlinelibrary.wiley.com/doi/abs/10.1029/2018JD028917
+      \endverb
+      \verb{url}
+      \verb https://agupubs.onlinelibrary.wiley.com/doi/abs/10.1029/2018JD028917
+      \endverb
+      \keyw{MERLIN,atmospheric methane,absorption cross section,line shape}
+    \endentry
+    \entry{Delahaye2016_MERLIN}{article}{}{}
+      \name{author}{10}{}{%
+        {{hash=3e5b6c040ee47a27e941e4ff0cad789c}{%
+           family={Delahaye},
+           familyi={D\bibinitperiod},
+           given={T.},
+           giveni={T\bibinitperiod}}}%
+        {{hash=c07d49031958d537f1179a7eee4e1f1a}{%
+           family={Maxwell},
+           familyi={M\bibinitperiod},
+           given={S.\bibnamedelimi E.},
+           giveni={S\bibinitperiod\bibinitdelim E\bibinitperiod}}}%
+        {{hash=1ad4f3308e176f7dfd0d672186929a50}{%
+           family={Reed},
+           familyi={R\bibinitperiod},
+           given={Z.\bibnamedelimi D.},
+           giveni={Z\bibinitperiod\bibinitdelim D\bibinitperiod}}}%
+        {{hash=006d527428ae3b86c2093d6d28e16072}{%
+           family={Lin},
+           familyi={L\bibinitperiod},
+           given={H.},
+           giveni={H\bibinitperiod}}}%
+        {{hash=eacab4c60295d7ee7b03fac393989ac5}{%
+           family={Hodges},
+           familyi={H\bibinitperiod},
+           given={J.\bibnamedelimi T.},
+           giveni={J\bibinitperiod\bibinitdelim T\bibinitperiod}}}%
+        {{hash=17a9f03e3cb10eab91b98134975c6de5}{%
+           family={Sung},
+           familyi={S\bibinitperiod},
+           given={K.},
+           giveni={K\bibinitperiod}}}%
+        {{hash=c6c8dce6d59a09128ef0835b9dc87093}{%
+           family={Devi},
+           familyi={D\bibinitperiod},
+           given={V.\bibnamedelimi M.},
+           giveni={V\bibinitperiod\bibinitdelim M\bibinitperiod}}}%
+        {{hash=f3242e9ca161b5ebce6f7e083f3ff09b}{%
+           family={Warneke},
+           familyi={W\bibinitperiod},
+           given={T.},
+           giveni={T\bibinitperiod}}}%
+        {{hash=6e7467d4610ff7ac0440892ce06ee14f}{%
+           family={Spietz},
+           familyi={S\bibinitperiod},
+           given={P.},
+           giveni={P\bibinitperiod}}}%
+        {{hash=cfdba62f6937f78a261bc531b851b8d3}{%
+           family={Tran},
+           familyi={T\bibinitperiod},
+           given={H.},
+           giveni={H\bibinitperiod}}}%
+      }
+      \strng{namehash}{e51c962b492d997862745fadc2c2c4db}
+      \strng{fullhash}{c845a38d38ce2a4470d16755873e7396}
+      \strng{fullhashraw}{c845a38d38ce2a4470d16755873e7396}
+      \strng{bibnamehash}{e51c962b492d997862745fadc2c2c4db}
+      \strng{authorbibnamehash}{e51c962b492d997862745fadc2c2c4db}
+      \strng{authornamehash}{e51c962b492d997862745fadc2c2c4db}
+      \strng{authorfullhash}{c845a38d38ce2a4470d16755873e7396}
+      \strng{authorfullhashraw}{c845a38d38ce2a4470d16755873e7396}
+      \field{extraname}{2}
+      \field{sortinit}{D}
+      \field{sortinithash}{6f385f66841fb5e82009dc833c761848}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{abstract}{Abstract In this article we describe a high-precision laboratory measurement targeting the R(6) manifold of the 2ν3 band of 12CH4. High-fidelity modeling of this absorption spectrum for atmospheric temperature and pressure conditions will be required by the Franco-German, Methane Remote Sensing LIDAR (MERLIN) space mission for retrievals of atmospheric methane. The analysis uses the Hartmann-Tran profile for modeling line shape and also includes line-mixing effects. To this end, six high-resolution and high signal-to-noise ratio absorption spectra of air-broadened methane were recorded using a frequency-stabilized cavity ring-down spectroscopy apparatus. Sample conditions corresponded to room temperature and spanned total sample pressures of 40 hPa–1013 hPa with methane molar fractions between 1 µmol mol−1 and 12 µmol mol−1. All spectroscopic model parameters were simultaneously adjusted in a multispectrum nonlinear least squares fit to the six measured spectra. Comparison of the fitted model to the measured spectra reveals the ability to calculate the room temperature, methane absorption coefficient to better than 0.1\% at the online position of the MERLIN mission. This is the first time that such fidelity has been reached in modeling methane absorption in the investigated spectral region, fulfilling the accuracy requirements of the MERLIN mission. We also found excellent agreement when comparing the present results with measurements obtained over different pressure conditions and using other laboratory techniques. Finally, we also evaluated the impact of these new spectral parameters on atmospheric transmissions spectra calculations.}
+      \field{journaltitle}{Journal of Geophysical Research: Atmospheres}
+      \field{number}{12}
+      \field{title}{Precise methane absorption measurements in the 1.64 μm spectral region for the MERLIN mission}
+      \field{volume}{121}
+      \field{year}{2016}
+      \field{pages}{7360\bibrangedash 7370}
+      \range{pages}{11}
+      \verb{doi}
+      \verb https://doi.org/10.1002/2016JD025024
+      \endverb
+      \verb{eprint}
+      \verb https://agupubs.onlinelibrary.wiley.com/doi/pdf/10.1002/2016JD025024
+      \endverb
+      \verb{urlraw}
+      \verb https://agupubs.onlinelibrary.wiley.com/doi/abs/10.1002/2016JD025024
+      \endverb
+      \verb{url}
+      \verb https://agupubs.onlinelibrary.wiley.com/doi/abs/10.1002/2016JD025024
+      \endverb
+      \keyw{MERLIN,methane,LIDAR,absorption,line shape,CRDS}
+    \endentry
+    \entry{FPI_angle_precision_requirement}{article}{}{}
+      \name{author}{3}{}{%
+        {{hash=bbb8fa07e5ac7aeb2c8742a142c1f91c}{%
+           family={Gustafsson},
+           familyi={G\bibinitperiod},
+           given={S\bibnamedelima E},
+           giveni={S\bibinitperiod\bibinitdelim E\bibinitperiod}}}%
+        {{hash=65774a1db7028a7542f8ea4806461a1e}{%
+           family={Khan},
+           familyi={K\bibinitperiod},
+           given={M\bibnamedelima N},
+           giveni={M\bibinitperiod\bibinitdelim N\bibinitperiod}}}%
+        {{hash=5a07043d5cb2eec181f281190e056040}{%
+           family={Eijk},
+           familyi={E\bibinitperiod},
+           given={J\bibnamedelima Van},
+           giveni={J\bibinitperiod\bibinitdelim V\bibinitperiod}}}%
+      }
+      \strng{namehash}{cfb94aab32859b8f23c0787bcfde804a}
+      \strng{fullhash}{cfb94aab32859b8f23c0787bcfde804a}
+      \strng{fullhashraw}{cfb94aab32859b8f23c0787bcfde804a}
+      \strng{bibnamehash}{cfb94aab32859b8f23c0787bcfde804a}
+      \strng{authorbibnamehash}{cfb94aab32859b8f23c0787bcfde804a}
+      \strng{authornamehash}{cfb94aab32859b8f23c0787bcfde804a}
+      \strng{authorfullhash}{cfb94aab32859b8f23c0787bcfde804a}
+      \strng{authorfullhashraw}{cfb94aab32859b8f23c0787bcfde804a}
+      \field{sortinit}{G}
+      \field{sortinithash}{32d67eca0634bf53703493fb1090a2e8}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{abstract}{A new arrangement for five-pass interferometry is presented together with a holder for wavelength scanning and mirror alignment. The parallelism of the mirror surfaces can be controlled precisely through independent rotations around two mutually perpendicular axes and the distance between the mirrors can be varied by 860 nm independently of the angular controls. Necessary modifications in the design for scanning in other wavelength ranges are outlined.}
+      \field{journaltitle}{Journal of Physics E: Scientific Instruments}
+      \field{month}{11}
+      \field{number}{11}
+      \field{title}{Wavelength scanning and mirror alignment of a new multipass Fabry-Perot interferometer}
+      \field{volume}{12}
+      \field{year}{1979}
+      \field{pages}{1100}
       \range{pages}{1}
+      \verb{doi}
+      \verb 10.1088/0022-3735/12/11/020
+      \endverb
+      \verb{urlraw}
+      \verb https://doi.org/10.1088/0022-3735/12/11/020
+      \endverb
+      \verb{url}
+      \verb https://doi.org/10.1088/0022-3735/12/11/020
+      \endverb
+    \endentry
+    \entry{Hanson_Spearrin_Goldenstein_2016}{book}{}{}
+      \name{author}{3}{}{%
+        {{hash=269ee29bd15dfc608a5ad9a0b37b0f87}{%
+           family={Hanson},
+           familyi={H\bibinitperiod},
+           given={Ronald\bibnamedelima K.},
+           giveni={R\bibinitperiod\bibinitdelim K\bibinitperiod}}}%
+        {{hash=d2f18c26e6b943e0c2b99350c17fbaab}{%
+           family={Spearrin},
+           familyi={S\bibinitperiod},
+           given={R.\bibnamedelimi Mitchell},
+           giveni={R\bibinitperiod\bibinitdelim M\bibinitperiod}}}%
+        {{hash=40b863ce2562387248776baa79ccdb8d}{%
+           family={Goldenstein},
+           familyi={G\bibinitperiod},
+           given={Christopher\bibnamedelima S.},
+           giveni={C\bibinitperiod\bibinitdelim S\bibinitperiod}}}%
+      }
+      \list{language}{1}{%
+        {en}%
+      }
+      \list{location}{1}{%
+        {Cham}%
+      }
+      \list{publisher}{1}{%
+        {Springer International Publishing}%
+      }
+      \strng{namehash}{2efeea815f5185914ae2a7810dad0c26}
+      \strng{fullhash}{2efeea815f5185914ae2a7810dad0c26}
+      \strng{fullhashraw}{2efeea815f5185914ae2a7810dad0c26}
+      \strng{bibnamehash}{2efeea815f5185914ae2a7810dad0c26}
+      \strng{authorbibnamehash}{2efeea815f5185914ae2a7810dad0c26}
+      \strng{authornamehash}{2efeea815f5185914ae2a7810dad0c26}
+      \strng{authorfullhash}{2efeea815f5185914ae2a7810dad0c26}
+      \strng{authorfullhashraw}{2efeea815f5185914ae2a7810dad0c26}
+      \field{sortinit}{H}
+      \field{sortinithash}{23a3aa7c24e56cfa16945d55545109b5}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{isbn}{9783319232515}
+      \field{title}{Spectroscopy and Optical Diagnostics for Gases}
+      \field{year}{2016}
+      \verb{doi}
+      \verb 10.1007/978-3-319-23252-2
+      \endverb
+      \verb{urlraw}
+      \verb https://link.springer.com/10.1007/978-3-319-23252-2
+      \endverb
+      \verb{url}
+      \verb https://link.springer.com/10.1007/978-3-319-23252-2
+      \endverb
+    \endentry
+    \entry{Vilas2012_beer_model_and_pressure_effects}{thesis}{}{}
+      \name{author}{1}{}{%
+        {{hash=d033de4c57d7c62178d1aff6a316e0af}{%
+           family={Jangale},
+           familyi={J\bibinitperiod},
+           given={Vilas},
+           giveni={V\bibinitperiod}}}%
+      }
+      \strng{namehash}{d033de4c57d7c62178d1aff6a316e0af}
+      \strng{fullhash}{d033de4c57d7c62178d1aff6a316e0af}
+      \strng{fullhashraw}{d033de4c57d7c62178d1aff6a316e0af}
+      \strng{bibnamehash}{d033de4c57d7c62178d1aff6a316e0af}
+      \strng{authorbibnamehash}{d033de4c57d7c62178d1aff6a316e0af}
+      \strng{authornamehash}{d033de4c57d7c62178d1aff6a316e0af}
+      \strng{authorfullhash}{d033de4c57d7c62178d1aff6a316e0af}
+      \strng{authorfullhashraw}{d033de4c57d7c62178d1aff6a316e0af}
+      \field{sortinit}{J}
+      \field{sortinithash}{b2f54a9081ace9966a7cb9413811edb4}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{month}{11}
+      \field{title}{Real-time characterization of natural gas and opportunity fuels by NIR absorption spectroscopy}
+      \field{type}{phdthesis}
+      \field{year}{2012}
+      \verb{doi}
+      \verb 10.13140/RG.2.2.11453.67045
+      \endverb
+    \endentry
+    \entry{FPI_Transmission_Peaks_figure}{thesis}{}{}
+      \name{author}{1}{}{%
+        {{hash=ae2be180d073c32178ba78f1d4dd58d3}{%
+           family={Kunc},
+           familyi={K\bibinitperiod},
+           given={Štěpán},
+           giveni={Š\bibinitperiod}}}%
+      }
+      \strng{namehash}{ae2be180d073c32178ba78f1d4dd58d3}
+      \strng{fullhash}{ae2be180d073c32178ba78f1d4dd58d3}
+      \strng{fullhashraw}{ae2be180d073c32178ba78f1d4dd58d3}
+      \strng{bibnamehash}{ae2be180d073c32178ba78f1d4dd58d3}
+      \strng{authorbibnamehash}{ae2be180d073c32178ba78f1d4dd58d3}
+      \strng{authornamehash}{ae2be180d073c32178ba78f1d4dd58d3}
+      \strng{authorfullhash}{ae2be180d073c32178ba78f1d4dd58d3}
+      \strng{authorfullhashraw}{ae2be180d073c32178ba78f1d4dd58d3}
+      \field{sortinit}{K}
+      \field{sortinithash}{c02bf6bff1c488450c352b40f5d853ab}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{month}{04}
+      \field{title}{Study of the Magnetically Induced QED Birefringence of the Vacuum in experiment OSQAR}
+      \field{type}{phdthesis}
+      \field{year}{2018}
+    \endentry
+    \entry{Long2022_spectral_line_shapes}{article}{}{}
+      \name{author}{5}{}{%
+        {{hash=68cc9f63d49579e2add3f1019d56be12}{%
+           family={Long},
+           familyi={L\bibinitperiod},
+           given={D.A.},
+           giveni={D\bibinitperiod}}}%
+        {{hash=7c2f56c9c0e8790e57e71a6887a0f078}{%
+           family={Adkins},
+           familyi={A\bibinitperiod},
+           given={E.M.},
+           giveni={E\bibinitperiod}}}%
+        {{hash=66298944ba00f916f1ba7ca1e2ec51ca}{%
+           family={Mendonca},
+           familyi={M\bibinitperiod},
+           given={J.},
+           giveni={J\bibinitperiod}}}%
+        {{hash=45931cbe2922fab22a9f837acce6f377}{%
+           family={Roche},
+           familyi={R\bibinitperiod},
+           given={S.},
+           giveni={S\bibinitperiod}}}%
+        {{hash=eacab4c60295d7ee7b03fac393989ac5}{%
+           family={Hodges},
+           familyi={H\bibinitperiod},
+           given={J.T.},
+           giveni={J\bibinitperiod}}}%
+      }
+      \strng{namehash}{c5109b11909aba033dc72551736d7c2f}
+      \strng{fullhash}{b50f5f78f56ae115e95afc6eee86a6bd}
+      \strng{fullhashraw}{b50f5f78f56ae115e95afc6eee86a6bd}
+      \strng{bibnamehash}{c5109b11909aba033dc72551736d7c2f}
+      \strng{authorbibnamehash}{c5109b11909aba033dc72551736d7c2f}
+      \strng{authornamehash}{c5109b11909aba033dc72551736d7c2f}
+      \strng{authorfullhash}{b50f5f78f56ae115e95afc6eee86a6bd}
+      \strng{authorfullhashraw}{b50f5f78f56ae115e95afc6eee86a6bd}
+      \field{sortinit}{L}
+      \field{sortinithash}{7c47d417cecb1f4bd38d1825c427a61a}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{abstract}{Line shape effects such as speed-dependence and collisional (Dicke) narrowing are manifest in high signal-to-noise ratio laboratory spectra for a wide range of molecular species and sample conditions. However, these effects are usually neglected in spectroscopic models used in remote sensing of atmospheric greenhouse gases. Here we examine the effects of line profile choice on laboratory spectra and XCO2 values retrieved from Total Carbon Column Observing Network (TCCON) spectra. To this end, we utilize limiting cases of the Hartmann-Tran profile (HTP) with shape parameters recently measured by cavity ring-down spectroscopy. Significant differences highlighting the importance of including speed-dependence effects in forward models were observed both in scaling retrievals as well as profile retrievals. However, because of uncertainties associated with the atmospheric temperature gradient, it was not possible to extract accurate carbon column profiles even with inclusion of these new line shape parameters and advanced line profiles.}
+      \field{issn}{0022-4073}
+      \field{journaltitle}{Journal of Quantitative Spectroscopy and Radiative Transfer}
+      \field{title}{The effects of advanced spectral line shapes on atmospheric carbon dioxide retrievals}
+      \field{volume}{291}
+      \field{year}{2022}
+      \field{pages}{108324}
+      \range{pages}{1}
+      \verb{doi}
+      \verb https://doi.org/10.1016/j.jqsrt.2022.108324
+      \endverb
+      \verb{urlraw}
+      \verb https://www.sciencedirect.com/science/article/pii/S002240732200259X
+      \endverb
+      \verb{url}
+      \verb https://www.sciencedirect.com/science/article/pii/S002240732200259X
+      \endverb
+      \keyw{Remote sensing,Lineshape effects,Greenhouse gases,Spectroscopy}
+    \endentry
+    \entry{Shemshad2012_overlapping_absorption_peaks_figure}{article}{}{}
+      \name{author}{3}{}{%
+        {{hash=58e87970514752978307ef6f869a6b22}{%
+           family={Shemshad},
+           familyi={S\bibinitperiod},
+           given={Javad},
+           giveni={J\bibinitperiod}}}%
+        {{hash=1ee4260361bfb151f1be8f6df6f1f423}{%
+           family={Aminossadati},
+           familyi={A\bibinitperiod},
+           given={Saiied},
+           giveni={S\bibinitperiod}}}%
+        {{hash=80ba43f5493b7e5131dacddfc3150c23}{%
+           family={Kizil},
+           familyi={K\bibinitperiod},
+           given={M.},
+           giveni={M\bibinitperiod}}}%
+      }
+      \strng{namehash}{4453fd2227ada93e6cefe61ea05eebb1}
+      \strng{fullhash}{4453fd2227ada93e6cefe61ea05eebb1}
+      \strng{fullhashraw}{4453fd2227ada93e6cefe61ea05eebb1}
+      \strng{bibnamehash}{4453fd2227ada93e6cefe61ea05eebb1}
+      \strng{authorbibnamehash}{4453fd2227ada93e6cefe61ea05eebb1}
+      \strng{authornamehash}{4453fd2227ada93e6cefe61ea05eebb1}
+      \strng{authorfullhash}{4453fd2227ada93e6cefe61ea05eebb1}
+      \strng{authorfullhashraw}{4453fd2227ada93e6cefe61ea05eebb1}
+      \field{sortinit}{S}
+      \field{sortinithash}{b164b07b29984b41daf1e85279fbc5ab}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{Sensors and Actuators B: Chemical}
+      \field{month}{08}
+      \field{title}{A review of developments in near infrared methane detection based on tunable diode laser}
+      \field{volume}{s 171–172}
+      \field{year}{2012}
+      \field{pages}{77\bibrangedash 92}
+      \range{pages}{16}
+      \verb{doi}
+      \verb 10.1016/j.snb.2012.06.018
+      \endverb
+    \endentry
+    \entry{Hodgson2005}{inbook}{}{}
+      \list{location}{1}{%
+        {New York, NY}%
+      }
+      \list{publisher}{1}{%
+        {Springer New York}%
+      }
+      \field{sortinit}{T}
+      \field{sortinithash}{9af77f0292593c26bde9a56e688eaee9}
+      \field{labeltitlesource}{title}
+      \field{booktitle}{Laser Resonators and Beam Propagation: Fundamentals, Advanced Concepts and Applications}
+      \field{isbn}{978-0-387-25110-3}
+      \field{title}{The Fabry Perot Resonator}
+      \field{year}{2005}
+      \field{pages}{189\bibrangedash 215}
+      \range{pages}{27}
+      \verb{doi}
+      \verb 10.1007/0-387-25110-3_5
+      \endverb
+      \verb{urlraw}
+      \verb https://doi.org/10.1007/0-387-25110-3_5
+      \endverb
+      \verb{url}
+      \verb https://doi.org/10.1007/0-387-25110-3_5
+      \endverb
+    \endentry
+    \entry{Zatorska2023_near_infrared_HITRAN}{article}{}{}
+      \name{author}{3}{}{%
+        {{hash=e79cf9b3ea3c64fecb71ee640baa0611}{%
+           family={Zatorska},
+           familyi={Z\bibinitperiod},
+           given={Magdalena},
+           giveni={M\bibinitperiod}}}%
+        {{hash=e566fd83b482cab5f3b9ca982b2914a1}{%
+           family={Gomółka},
+           familyi={G\bibinitperiod},
+           given={Grzegorz},
+           giveni={G\bibinitperiod}}}%
+        {{hash=ec5fcc6c9a9e80cb3c27c83abcd9686f}{%
+           family={Nikodem},
+           familyi={N\bibinitperiod},
+           given={Michal},
+           giveni={M\bibinitperiod}}}%
+      }
+      \strng{namehash}{e04297957e11f1206ec5ce14c7008209}
+      \strng{fullhash}{e04297957e11f1206ec5ce14c7008209}
+      \strng{fullhashraw}{e04297957e11f1206ec5ce14c7008209}
+      \strng{bibnamehash}{e04297957e11f1206ec5ce14c7008209}
+      \strng{authorbibnamehash}{e04297957e11f1206ec5ce14c7008209}
+      \strng{authornamehash}{e04297957e11f1206ec5ce14c7008209}
+      \strng{authorfullhash}{e04297957e11f1206ec5ce14c7008209}
+      \strng{authorfullhashraw}{e04297957e11f1206ec5ce14c7008209}
+      \field{sortinit}{Z}
+      \field{sortinithash}{96892c0b0a36bb8557c40c49813d48b3}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{Optics Continuum}
+      \field{month}{01}
+      \field{title}{Near-infrared quartz-enhanced photoacoustic spectroscopy system for ppb-level methane detection}
+      \field{volume}{2}
+      \field{year}{2023}
+      \field{pages}{266\bibrangedash 273}
+      \range{pages}{8}
+      \verb{doi}
+      \verb 10.1364/OPTCON.477782
+      \endverb
     \endentry
   \enddatalist
 \endrefsection

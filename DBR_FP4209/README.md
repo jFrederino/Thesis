@@ -61,6 +61,7 @@ seperate tabs function correctly.
 Channel 1 works as previously built voltmeter inst. still need to rework depending on voltmeter connected to system, as well as allow for multiple voltmeter comms.
 
 # TO-DO LIST 
+-------
 
 ## CATMULL-ROM SPLINE INTERPOLATION!!
 

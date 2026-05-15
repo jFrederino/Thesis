@@ -242,7 +242,16 @@ class GUI_Controller:
             wl_list.append(row[5])
             new_voltage_1_list.append(row[-1])
         dpg.configure_item(f'v_1_data_{self._num_voltage_1_series}', x=wl_list, y=new_voltage_1_list)
-            
+
+    def get_duplicates(self, data:list):
+        from collections import Counter
+        # Convert sublists to tuples to make them hashable
+        counts = Counter(tuple(x) for x in data)
+
+        # List only the items that appear more than once
+        duplicates = [list(item) for item, count in counts.items() if count > 1]
+        return duplicates
+    
     def _scan(self):
         self.logger.log("Starting Scan")
         packets = self.Laser.make_packets_list(self.DAC_list)
@@ -256,7 +265,7 @@ class GUI_Controller:
         self.voltage_2_data: list[tuple] = []
         new_voltage_1_list = []
         new_voltage_2_list = []
-
+        sent_list = []
         #create New Voltage series for plot
     
         for i in range(num_packets):
@@ -276,6 +285,7 @@ class GUI_Controller:
                 logger_message = 'Response Packets: \n'
 
                 if self.debug:
+                    sent_list.append([fm, bm, ph, soa])
                     if self.logger_on: self.logger.log_info(f'Target: {target_wl}')
                     for i in range(4):
                         name, status, status_message, gain_value = "debug_name", '0x01', "Command Executed, Response Data Valid: ", i
@@ -283,7 +293,9 @@ class GUI_Controller:
 
                     if self.logger_on: self.logger.log_debug(logger_message)
                 else: 
+                    sent_list.append([fm, bm, ph, soa])
                     responses:list[tuple] = self.Laser.set_laser_target_via_packets(fm, bm, ph, soa)
+
                     if self.logger_on: self.logger.log_info(f'Target: {target_wl}')
                     for response in responses:
                         name, status, status_message, gain_value = response
@@ -314,6 +326,8 @@ class GUI_Controller:
                     
             time.sleep(self.packet_delay)
         
+        print(self.get_duplicates(sent_list))
+
         if self.logger_on:
             self.logger.log(f"Scan Complete!")
 
