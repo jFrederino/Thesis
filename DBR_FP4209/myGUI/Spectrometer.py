@@ -10,7 +10,6 @@ import pathlib
 import fastnumbers 
 import ctypes
 
-
 class DBR_Spectrometer:
     def __init__(self, 
         port_name:str = "COM4", 
@@ -52,6 +51,7 @@ class DBR_Spectrometer:
             print(status_message)
         return response, res
 
+    #NOTE: ENABLE/DISABLE METHODS ARE CURRENTLY BUGGED AND SHOULD NOT BE USED
     def enable(self): 
         '''
         Turns the laser output on. Connects to default Serial Port {self._default_serial_port} if not connected. Defaults to 1627.5 nm output.
@@ -83,6 +83,9 @@ class DBR_Spectrometer:
         
         else: print("Laser is already off.")
 
+
+
+
     def set_default_serial_port(self, port_name:str):
         self._default_serial_port = port_name
         print(f"Default Serial Port set to: {self._default_serial_port}")
@@ -112,35 +115,6 @@ class DBR_Spectrometer:
 
     def write_register(self, reg_num, reg_data):
         self.message_exchange(self.format_message(reg_num, reg_data, write=True))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
     def make_packet(self, DAC_type:str, value:int) -> bytes:
@@ -175,14 +149,10 @@ class DBR_Spectrometer:
         check = list(res)
         new_check = [check[0], hex(check[1]), hex(check[2]), check[3]]
         #print(check)
-        
-        
+
         #print(int.from_bytes(res))
-        new_packet = self.format_message(regnum=register, data=value, write=True)
+        new_packet = self.format_message(reg_num=register, data=value, write=True)
     
-
-
-
         return res 
     
 

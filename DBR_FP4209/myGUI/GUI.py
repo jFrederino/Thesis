@@ -13,6 +13,8 @@ import Spectrometer as dbr
 import generate_table as table
 import pyvisa
 
+
+
 class GUI_Controller:
     def __init__(self, debug: bool = False):
         self.debug = debug
@@ -129,6 +131,7 @@ class GUI_Controller:
                 _new_connection()
         except: _new_connection()
 
+    #BUG : THESE TWO METHODS NEED TO BE FIXED, THEY CAUSE UNSTABLE BEHAVIOR
     def enable_laser(self):
         self.Laser.enable()
         
@@ -141,7 +144,7 @@ class GUI_Controller:
         if self.logger_on: 
             self.logger.log("Laser Disabled")
             self.logger.log(f"Voltage: {self.read_voltage_1_()}")
-
+    # ----------------------------------------------------------------------
 
     def read_voltage_1_(self) -> float:
         try: self._voltmeter_inst_1
@@ -162,112 +165,64 @@ class GUI_Controller:
         match sender:
             case "volt_com_1": channel = 1
             case "volt_com_2": channel = 2
+  
+        if self.logger_on: self.logger.log(f"Connecting to Voltmeter channel {channel} : {data}")
         try:
-            if channel == 1: print(self._voltmeter_inst_1)
-            if channel == 2: print(self._voltmeter_inst_2)
+            if channel == 1:
+                self._voltmeter_inst_1 = self.voltmeter_resource_manager.open_resource(data)
+                self.logger.log(f"Voltmeter IDN: {self._voltmeter_inst_1.query("*IDN?")}")
+                self.logger.log(f"V_1 = {self._voltmeter_inst_1.query("MEAS:VOLT:DC? 10,0.001")}")
+            if channel == 2: 
+                self._voltmeter_inst_2 = self.voltmeter_resource_manager.open_resource(data)
+                self.logger.log(f"Voltmeter IDN: {self._voltmeter_inst_2.query("*IDN?")}")
+                self.logger.log(f"V_2 = {self._voltmeter_inst_2.query("MEAS:VOLT:DC? 10,0.001")}")
         except:
-            if self.logger_on: self.logger.log(f"Connecting to Voltmeter channel {channel} : {data}")
-            try:
-                if channel == 1:
-                    self._voltmeter_inst_1 = self.voltmeter_resource_manager.open_resource(data)
-                    self.logger.log(f"Voltmeter IDN: {self._voltmeter_inst_1.query("*IDN?")}")
-                    self.logger.log(f"V_1 = {self._voltmeter_inst_1.query("MEAS:VOLT:DC? 10,0.001")}")
-                if channel == 2: 
-                    self._voltmeter_inst_2 = self.voltmeter_resource_manager.open_resource(data)
-                    self.logger.log(f"Voltmeter IDN: {self._voltmeter_inst_2.query("*IDN?")}")
-                    self.logger.log(f"V_2 = {self._voltmeter_inst_2.query("MEAS:VOLT:DC? 10,0.001")}")
-            except:
-                self.logger.log_error(f"Pyvisa cannot connect to Device: {data}")
-                return
+            self.logger.log_error(f"Pyvisa cannot connect to Device: {data}")
+            return
         
-
     def disconnect_from_voltmeter(self):
         try: 
             self._voltmeter_inst.close()
         except: 
-            self.connect_to_voltmeter()
-            self.disconnect_from_voltmeter()
-
-
-    def add_manual_to_voltage_plot(self):
-
-        data1 = [[1650.9495,1.635],
-                [1650.954,1.325],
-                [1650.9585,1.959],
-                [1650.963,4.395],
-                [1650.9675,3.116],
-                [1650.972,1.588],
-                [1650.9765,1.324],
-                [1650.981,2.004],
-                [1650.9855,4.081],
-                [1650.99,3.23],
-                [1650.9945,1.537],
-                [1650.999,1.359],
-                [1651.0035,2.111]]
-        data2 = [[5204,7138,7776,9282,19374,1650.918,3.8],
-                [5205,7138,7776,9136,19313,1650.9225,1.9],
-                [5206,7138,7776,8992,19259,1650.927,1.3],
-                [5207,7138,7776,8850,19221,1650.9315,1.5],
-                [5208,7138,7776,8706,19163,1650.936,2.3],
-                [5209,7138,7776,8552,19132,1650.9405,4.1],
-                [5210,7138,7776,8408,19094,1650.945,3.5],
-                [5211,7138,7776,8274,19055,1650.9495,2.0],
-                [5212,7138,7776,8130,19004,1650.954,1.4],
-                [5213,7138,7776,7984,18964,1650.9585,1.4],
-                [5214,6964,7568,8482,19159,1650.963,2.6],
-                [5215,6964,7568,8370,19134,1650.9675,4.1],
-                [5216,6964,7568,8242,19117,1650.972,3.6],
-                [5217,6964,7568,8112,19086,1650.9765,1.9],
-                [5218,6964,7568,7968,19047,1650.981,1.3],
-                [5219,6964,7568,7842,19020,1650.9855,1.4],
-                [5220,6964,7568,7714,18987,1650.99,2.4],
-                [5221,6964,7568,7560,18943,1650.9945,4.4],
-                [5222,6964,7568,7432,18926,1650.999,2.7],
-                [5223,6964,7568,7314,18908,1651.0035,1.5]]
-        
-        wl_list_1 = []
-        new_voltage_1_list_1 = []
-        self.add_voltage_1_series()
-        
-        for row in data1:
-            wl_list_1.append(row[0])
-            new_voltage_1_list_1.append(row[-1])
-        dpg.configure_item(f'v_1_data_{self._num_voltage_1_series}', x=wl_list_1, y=new_voltage_1_list_1)
-
-        wl_list = []
-        new_voltage_1_list = []
-        self.add_voltage_1_series()
-
-        for row in data2:
-            wl_list.append(row[5])
-            new_voltage_1_list.append(row[-1])
-        dpg.configure_item(f'v_1_data_{self._num_voltage_1_series}', x=wl_list, y=new_voltage_1_list)
+            self.logger.log_error(f'Voltmeter instance not found')
 
     def get_duplicates(self, data:list):
         from collections import Counter
         # Convert sublists to tuples to make them hashable
         counts = Counter(tuple(x) for x in data)
-
         # List only the items that appear more than once
         duplicates = [list(item) for item, count in counts.items() if count > 1]
         return duplicates
     
     def _scan(self):
         self.logger.log("Starting Scan")
+
+        start = time.perf_counter()
         packets = self.Laser.make_packets_list(self.DAC_list)
+        end = time.perf_counter()
+
+        self.logger.log_debug(f"packet generation time: {end - start:.6f} seconds")
+        
         num_packets = len(packets)
         if self.logger_on: self.logger.log_info(f"Packets : {num_packets}")
 
         wl_target_list = []
+        #create New Voltage series for plot
         self.add_voltage_1_series()
         self.add_voltage_2_series()
+
         self.voltage_1_data: list[tuple] = []
         self.voltage_2_data: list[tuple] = []
+
         new_voltage_1_list = []
         new_voltage_2_list = []
         sent_list = []
-        #create New Voltage series for plot
-    
+        
+        #code timing debug lists for averageing
+        packet_time_list = []
+        voltage_time_list = []
+
+        start = time.perf_counter()
         for i in range(num_packets):
 
             while self.scan_paused: time.sleep(0.1)
@@ -292,27 +247,38 @@ class GUI_Controller:
                         logger_message += f'{name} : status = {status} : {status_message}{gain_value} \n'
 
                     if self.logger_on: self.logger.log_debug(logger_message)
-                else: 
-                    sent_list.append([fm, bm, ph, soa])
-                    responses:list[tuple] = self.Laser.set_laser_target_via_packets(fm, bm, ph, soa)
+                # -------------------------------------------------------------------------------------------
 
+                #PACKET COMMUNICATION
+                else: 
+                    start_packet_time = time.perf_counter()
+                    responses:list[tuple] = self.Laser.set_laser_target_via_packets(fm, bm, ph, soa)
+                    end_packet_time = time.perf_counter()
+                    packet_time_list.append(end_packet_time - start_packet_time)
+
+                    
                     if self.logger_on: self.logger.log_info(f'Target: {target_wl}')
                     for response in responses:
                         name, status, status_message, gain_value = response
                         logger_message += f'{name} : status = {status} : {status_message}{gain_value} \n'
 
                     if self.logger_on: self.logger.log_info(logger_message)
-                    
+                # -------------------------------------------------------------------------------------------
+
+                start_voltage_time = time.perf_counter()
                 if self.log_voltage: 
                     if self.debug: 
                         new_voltage_1 = random.randrange(-5000,5000) / 1000
                         new_voltage_2 = random.randrange(-5000,5000) / 1000
+
+                    #VOLTMETER COMMUNICATION
                     else: 
                         try:
                             time.sleep(self.settle_delay)
                             new_voltage_1 = self.read_voltage_1_()
                             new_voltage_2 = self.read_voltage_2_()
                         except: self.logger.log_error("Voltmeter Read Error")
+                        
                     new_voltage_1_list.append(new_voltage_1)
                     new_voltage_2_list.append(new_voltage_2)
 
@@ -323,13 +289,22 @@ class GUI_Controller:
                     dpg.configure_item(f'v_2_data_{self._num_voltage_2_series}', x=wl_target_list, y=new_voltage_2_list)
                     
                     self.logger.log_info(f"V_1 = ({target_wl}, {new_voltage_1})" + "\n"+ "V_2 = ({target_wl}, {new_voltage_2})" + "\n" + "-"*60)
-                    
+                end_voltage_time = time.perf_counter()
+                voltage_time_list.append(end_voltage_time - start_voltage_time)
+                # ---------------------------------------------------------------------------------
+
             time.sleep(self.packet_delay)
         
-        print(self.get_duplicates(sent_list))
+        if self.debug: self.logger.log_debug(f'Duplicate Packets:\n' + f'{self.get_duplicates(sent_list)}')
+        if self.logger_on: self.logger.log(f"Scan Complete!")
+        end = time.perf_counter()
 
-        if self.logger_on:
-            self.logger.log(f"Scan Complete!")
+        self.logger.log_debug(f"full scan time: {end - start:.6f} seconds")
+        self.logger.log_debug(f"avg 4 packet send & receive time: {np.mean(packet_time_list):.6f} seconds")
+        self.logger.log_debug(f"std: {np.std(packet_time_list):.6f} seconds" + '\n')
+        self.logger.log_debug(f"avg voltage recording time: {np.mean(voltage_time_list):.6f} seconds")
+        self.logger.log_debug(f"std: {np.std(voltage_time_list):.6f} seconds")
+
 
     def import_LUT(self):
         def update_DAC_table(path):
@@ -744,7 +719,7 @@ class GUI_Controller:
                 debug_button = dpg.add_checkbox(label="Debug Mode", default_value=self.debug, callback=self.toggle_debug, tag="voltage_config_toggle_debug_button")
                 logger_button = dpg.add_checkbox(label="Log Output", default_value=True, callback=self.toggle_logger_on, tag="voltage_config_toggle_logger_button")
                 voltage_button = dpg.add_checkbox(label="Read Voltage", default_value=self.log_voltage, callback=self.toggle_log_voltage, tag="voltage_config_toggle_log_voltage_button")
-                add_manual = dpg.add_button(label="Add Manual Voltages",width=config_width-16,callback=self.add_manual_to_voltage_plot)
+                
                 dpg.add_separator()
                 dpg.add_spacer(height=self.window_buffer_size)
 
@@ -936,16 +911,14 @@ class GUI_Controller:
     def tab_callback(self, sender, data):
         def clear_primary_window():
 
-            if dpg.does_item_exist("laser_config_window"):
-                dpg.hide_item("laser_config_window")
-            if dpg.does_item_exist("voltage_config_window"):
-                dpg.hide_item("voltage_config_window")
+            if dpg.does_item_exist("laser_config_window"): dpg.hide_item("laser_config_window")
+            if dpg.does_item_exist("voltage_config_window"): dpg.hide_item("voltage_config_window")
 
             if dpg.does_item_exist("voltage_1_window"):
                 dpg.hide_item("voltage_1_window")
                 dpg.hide_item("voltage_2_window")
-            if dpg.does_item_exist("DAC_window"):
-                dpg.hide_item("DAC_window")
+
+            if dpg.does_item_exist("DAC_window"): dpg.hide_item("DAC_window")
 
         if dpg.get_item_configuration(data)['label'] == "Voltage Data":
             clear_primary_window()
