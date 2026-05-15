@@ -131,7 +131,6 @@ class GUI_Controller:
                 _new_connection()
         except: _new_connection()
 
-    #BUG : THESE TWO METHODS NEED TO BE FIXED, THEY CAUSE UNSTABLE BEHAVIOR
     def enable_laser(self):
         self.Laser.enable()
         
@@ -144,7 +143,6 @@ class GUI_Controller:
         if self.logger_on: 
             self.logger.log("Laser Disabled")
             self.logger.log(f"Voltage: {self.read_voltage_1_()}")
-    # ----------------------------------------------------------------------
 
     def read_voltage_1_(self) -> float:
         try: self._voltmeter_inst_1
@@ -648,13 +646,13 @@ class GUI_Controller:
         import csv
         CWD = os.path.dirname(os.path.realpath(__file__))
         if self.interpolation_type == "true_linear":
-            new_table_path = path + f'/True_Linear_({self.interpolation_value}, {self.start_index}, {self.end_index}).csv'
+            new_table_path = path + f'/True_Linear_({self.interpolation_value}, {self.start_wl}, {self.end_wl}).csv'
 
         if self.interpolation_type == "linear_extrapolation":
-            new_table_path = path + f'/Linear_Extrapolation_({self.interpolation_value}, {self.start_index}, {self.end_index}).csv'
+            new_table_path = path + f'/Linear_Extrapolation_({self.interpolation_value}, {self.start_wl}, {self.end_wl}).csv'
 
         if self.interpolation_type == "line_fit":
-            new_table_path = path + f'/Line_Fit_({self.interpolation_value}, {self.start_index}, {self.end_index}).csv'
+            new_table_path = path + f'/Line_Fit_({self.interpolation_value}, {self.start_wl}, {self.end_wl}).csv'
 
         with open(new_table_path, 'w', newline='') as csvfile:
             writer = csv.writer(csvfile, delimiter=',', quotechar='|')
@@ -666,7 +664,7 @@ class GUI_Controller:
                 idx += 1
 
         csvfile.close()
-        if self.logger_on: self.log(f"Voltage Data Saved in: {path}")
+        if self.logger_on: self.logger.log(f"Voltage Data Saved in: {path}")
 
     def toggle_scan(self):
         if not self.scan_running:

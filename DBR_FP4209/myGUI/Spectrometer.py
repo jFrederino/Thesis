@@ -51,45 +51,26 @@ class DBR_Spectrometer:
             print(status_message)
         return response, res
 
-    #NOTE: ENABLE/DISABLE METHODS ARE CURRENTLY BUGGED AND SHOULD NOT BE USED
+
     def enable(self): 
         '''
         Turns the laser output on. Connects to default Serial Port {self._default_serial_port} if not connected. Defaults to 1627.5 nm output.
         '''
+        self.write_register(21, 0)
+        self.write_register(16, 40959)
 
-        #SWEEP = 0                      #GAIN = 255
-        _ON = [bytes([167, 0, 0, 0]), bytes([144, 255, 0, 0])]
-        response, is_on = self.check_if_on()
-        if not is_on:
-            for packet in _ON: 
-                self._laser_serial.write(packet)
-                self.read_response()
-
-            self.set_laser_target(fm_val=11425, bm_val=4698, ph_val=17448, soa_val=24222)
-            self._laser_on = True
+        self._laser_on = True
 
     def disable(self): 
         '''
         Turns the laser output off. Does NOT disconnect from Serial Connection.
         '''
-        #SWEEP = 0                      #GAIN = 0
-        _OFF = [bytes([167, 0, 0, 0]), bytes([144, 0, 0, 0])]
-
-        if self.check_if_on():
-            for packet in _OFF: 
-                self._laser_serial.write(packet)
-                self.read_response()
-            self._laser_on = False
-        
-        else: print("Laser is already off.")
-
-
-
+        self.write_register(39, 0)
+        self.write_register(16, 0)
 
     def set_default_serial_port(self, port_name:str):
         self._default_serial_port = port_name
         print(f"Default Serial Port set to: {self._default_serial_port}")
-
 
 
     def message_exchange(self, command):
@@ -245,7 +226,6 @@ class DBR_Spectrometer:
         print(f"Serial Port {name} Closed.")
 
     def read_response(self):
-    
         response = self._laser_serial.read(4)
         reg = response[0]
         value_msb = response[1]
@@ -270,7 +250,7 @@ class DBR_Spectrometer:
             case 0x11: name = "PH"
             case 0x14: name = "SOA"
 
-            #These relate to the Laser's built in LUT Sweep functionality, which is currently not being used in this project.
+            #These relate to the Laser's built in LUT Sweep functionality, but some of them, like LUT Start Index must be updated when enabling the Laser.
             case 0x1E: name = "LUT Prepare Write"
             case 0x1F: name = "LUT Write Point" #automatically incremented after write
             case 0x20: name = "LUT Start Index"
