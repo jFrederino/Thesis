@@ -2,13 +2,9 @@
 import serial, sys, os, glob, time
 import serial.tools.list_ports
 from timeit import default_timer as timer
-from tqdm import tqdm
-import pyvisa
-import csv 
 import generate_table as table
 import pathlib 
-import fastnumbers 
-import ctypes
+
 
 class DBR_Spectrometer:
     def __init__(self, 
@@ -124,17 +120,9 @@ class DBR_Spectrometer:
         if value > maximum: raise Exception(f"{DAC_type} value outside of acceptable range: {value} > {maximum}" )
         if value < minimum: raise Exception(f"{DAC_type} DAC value outside of acceptable range: {value} < {minimum}" )
 
-        msb, lsb = self.val_to_split_hex(value)
-        intended = [register, msb, lsb, 0x00]
-        res = bytes([register, int(msb, 16), int(lsb, 16), 0x00])
-        check = list(res)
-        new_check = [check[0], hex(check[1]), hex(check[2]), check[3]]
-        #print(check)
-
-        #print(int.from_bytes(res))
         new_packet = self.format_message(reg_num=register, data=value, write=True)
     
-        return res 
+        return new_packet
     
 
     def get_duplicates(self, data:list):
@@ -179,12 +167,8 @@ class DBR_Spectrometer:
             self.read_response()
 
     def set_laser_target_via_packets(self, fm_packet, bm_packet, ph_packet, soa_packet):
-        #packets = [fm_packet, bm_packet, ph_packet, soa_packet]
-        #packets = [bm_packet, fm_packet, ph_packet, soa_packet]
-        #packets = [ph_packet, fm_packet, bm_packet, soa_packet]
         packets = [ph_packet, bm_packet, fm_packet, soa_packet]
-        
-
+    
         responses = []
         for packet in packets:
             self._laser_serial.write(packet)
@@ -273,7 +257,6 @@ class DBR_Spectrometer:
             print(f"Error: status code 0x{status:X}")
             print(status_message)
             self._laser_serial.close()
-            #sys.exit()
 
         return name, status, status_message, gain_value
 
@@ -313,7 +296,9 @@ class DBR_Spectrometer:
 
         DAC_list = self.DAC_Table.get_DAC_arrays(path)  #read values from table
 
-        if not self.saving_LUT: pathlib.Path.unlink(path) #NOTE: this will delete even previously saved tables, if reusing one. It deletes what DBR is using for current scan after the scan finishes.
+        if not self.saving_LUT: pathlib.Path.unlink(path) 
+        #NOTE: this will delete even previously saved tables, if reusing one. 
+        # It deletes what DBR is using for current scan after the scan finishes.
 
         return DAC_list, logger_message
    
