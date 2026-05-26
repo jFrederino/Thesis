@@ -13,6 +13,10 @@ import Spectrometer as dbr
 import generate_table as table
 import pyvisa
 
+from labjack import ljm
+import socket
+import struct
+
 
 
 class GUI_Controller:
@@ -21,8 +25,8 @@ class GUI_Controller:
         self.logger_on: bool = True #if false, most class methods will not print update statements in logger in the GUI. some will still print: (Serial and Voltmeter connection info, etc.)
 
         # scan control tracking
-        self.packet_delay: float = 0.1
-        self.settle_delay: float = 0.1
+        self.packet_delay: float = 0.0
+        self.settle_delay: float = 0.0
         self.scan_tracker = 1627.5 #x value of scan tracker line on DAC plot, and table index.
         self.scan_running = False
         self.scan_paused = False
@@ -65,6 +69,9 @@ class GUI_Controller:
         # Voltmeter pyvisa communication parameters
         self.default_voltmeter_1_connection = "USB0::0x2A8D::0x1601::MY60077980::INSTR"
         self.default_voltmeter_2_connection = "USB0::0x2A8D::0x1601::MY60077980::INSTR"
+        self.voltage_hardware_averaging = False
+        self.v1_channel = 'AIN0'
+        self.v2_channel = 'AIN0'
 
         dpg.create_context()
         matplotlib.use('Agg')
@@ -144,39 +151,157 @@ class GUI_Controller:
             self.logger.log("Laser Disabled")
             self.logger.log(f"Voltage: {self.read_voltage_1_()}")
 
+    def toggle_voltage_averaging(self, sender, data):
+
+        self.voltage_hardware_averaging = bool(data)
+
+        if self.voltage_hardware_averaging == 0: 
+            try: 
+                ljm.eWriteName(self.handle, f"{self.v1_channel}_EF_INDEX", 0)
+                ljm.eWriteName(self.handle, f"{self.v2_channel}_EF_INDEX", 0)
+                self.logger.log("Hardware Voltage Averaging Disabled")
+
+            except ljm.LJMError as e:
+                self.logger.log_error(f"LJM Error occurred: {e}")
+
+        if self.voltage_hardware_averaging == 1:
+            '''
+            config_names_1 = [
+                f"{self.v1_channel}_EF_INDEX",       # Set Extended Feature index
+                f"{self.v1_channel}_EF_CONFIG_A",    # Number of samples to collect
+                f"{self.v1_channel}_EF_CONFIG_D"     # Scan rate / frequency (Hz)
+            ]
+            config_values = [
+                3,       # Index 3 = Average, Min, & Max mode
+                100,     # Collect 100 samples per read cycle
+                50000.0   # Sample at 50kHz (100kHz/2 channels)
+            ]
+            '''
+
+            try:
+                # 3. Write configuration to the T7
+                ljm.eWriteNames(self.handle, 3, [f"{self.v1_channel}_EF_INDEX",f"{self.v1_channel}_EF_CONFIG_A", f"{self.v1_channel}_EF_CONFIG_D"], [3, 100, 50000.0])
+                self.logger.log(f"{ljm.eReadNames(self.handle, 3, [f"{self.v1_channel}_EF_INDEX",f"{self.v1_channel}_EF_CONFIG_A", f"{self.v1_channel}_EF_CONFIG_D"])}")
+
+                ljm.eWriteNames(self.handle, 3, [f"{self.v2_channel}_EF_INDEX",f"{self.v2_channel}_EF_CONFIG_A", f"{self.v2_channel}_EF_CONFIG_D"], [3, 100, 50000.0])
+                self.logger.log(f"{ljm.eReadNames(self.handle, 3, [f"{self.v2_channel}_EF_INDEX",f"{self.v2_channel}_EF_CONFIG_A", f"{self.v2_channel}_EF_CONFIG_D"])}")
+
+                self.logger.log(f"{self.v1_channel} & {self.v2_channel} EF configured successfully.")
+                
+            except ljm.LJMError as e:
+                self.logger.log_error(f"LJM Error occurred: {e}")
+
+        
     def read_voltage_1_(self) -> float:
+        '''
         try: self._voltmeter_inst_1
         except: 
             self.connect_to_voltmeter(sender="volt_com_1", data=self.default_voltmeter_1_connection)
+        '''
+        if self.voltmeter_type == "KEYSIGHT":
+            return float(self._voltmeter_inst_1.query("MEAS:VOLT:DC? 10,0.001")) #SLOW
+        if self.voltmeter_type == "LJM":
+            #self.logger.log_debug("T7")
+            if self.voltage_hardware_averaging:
+                averaged_voltage = float()
+                try: 
+                    # 4. Perform a single read of the averaged samples
+                    # Reading _READ_A explicitly triggers the T7 to capture the burst and average it
+                    averaged_voltage = ljm.eReadName(self.handle, f"{self.v1_channel}_EF_READ_A")
+                    self.logger.log(f"Averaged Reading: {averaged_voltage:.5f} V")
 
-        return float(self._voltmeter_inst_1.query("MEAS:VOLT:DC? 10,0.001"))
+                except ljm.LJMError as e:
+                    self.logger.log_error(f"LJM Error occurred: {e}")
+
+                return averaged_voltage
+            else: 
+                #self.logger.log_debug("T7")
+                #self.logger.log(f"Channel = {int(self.v1_channel[-1])}")
+                address = int(self.v1_channel[-1])*2
+                self.logger.log(f"{address}")
+                return ljm.eReadAddress(self.handle, address=address, dataType=ljm.constants.FLOAT32)
     
     def read_voltage_2_(self) -> float:
+        '''
         try: self._voltmeter_inst_2
         except: 
             self.connect_to_voltmeter(sender="volt_com_2", data=self.default_voltmeter_2_connection)
+        '''
+        if self.voltmeter_type == "KEYSIGHT":
+            return float(self._voltmeter_inst_2.query("MEAS:VOLT:DC? 10,0.001")) #SLOW
+        if self.voltmeter_type == "LJM":
+            #self.logger.log_debug("T7")
+            if self.voltage_hardware_averaging:
+                #print("averaging?")
+                averaged_voltage = float()
+                try: 
+                    # 4. Perform a single read of the averaged samples
+                    # Reading _READ_A explicitly triggers the T7 to capture the burst and average it
+                    averaged_voltage = ljm.eReadName(self.handle, f"{self.v2_channel}_EF_READ_A")
+                    self.logger.log(f"Averaged Reading: {averaged_voltage:.5f} V")
 
-        return float(self._voltmeter_inst_2.query("MEAS:VOLT:DC? 10,0.001"))
+                except ljm.LJMError as e:
+                    self.logger.log_error(f"LJM Error occurred: {e}")
+
+                return averaged_voltage
+            else: 
+                #print("not averaging")
+                #self.logger.log_debug("T7")
+                address = int(self.v2_channel[-1])*2
+                self.logger.log(f"{address}")
+                return ljm.eReadAddress(self.handle, address=address, dataType=ljm.constants.FLOAT32)
 
     def connect_to_voltmeter(self, sender, data):
+
+        self.logger.log(data)
+
+        if 'INSTR' in data:
+            self.voltmeter_type = 'KEYSIGHT'
+        if 'LJM' in data:
+            self.voltmeter_type = 'LJM'
+            self.v1_channel = 'AIN0'
+            self.v2_channel = 'AIN0'
+        #self.logger.log(voltmeter_type)
+        
         channel = 1
         match sender:
             case "volt_com_1": channel = 1
             case "volt_com_2": channel = 2
   
         if self.logger_on: self.logger.log(f"Connecting to Voltmeter channel {channel} : {data}")
-        try:
-            if channel == 1:
-                self._voltmeter_inst_1 = self.voltmeter_resource_manager.open_resource(data)
-                self.logger.log(f"Voltmeter IDN: {self._voltmeter_inst_1.query("*IDN?")}")
-                self.logger.log(f"V_1 = {self._voltmeter_inst_1.query("MEAS:VOLT:DC? 10,0.001")}")
-            if channel == 2: 
-                self._voltmeter_inst_2 = self.voltmeter_resource_manager.open_resource(data)
-                self.logger.log(f"Voltmeter IDN: {self._voltmeter_inst_2.query("*IDN?")}")
-                self.logger.log(f"V_2 = {self._voltmeter_inst_2.query("MEAS:VOLT:DC? 10,0.001")}")
-        except:
-            self.logger.log_error(f"Pyvisa cannot connect to Device: {data}")
-            return
+
+        if self.voltmeter_type == "LJM":
+            try:
+                if channel == 1: self._voltmeter_inst_1 = data
+                if channel == 2: self._voltmeter_inst_2 = data
+                    
+                Labjack_Serial_Number = data.split('::')[1]
+                # Open LabJack
+                self.handle = ljm.openS(deviceType="T7", connectionType="ANY", identifier=Labjack_Serial_Number)
+                # Call eReadName to read the serial number from the LabJack.
+                self.logger.log(f"Voltmeter SN = {ljm.eReadName(self.handle, "SERIAL_NUMBER")}")
+                self.logger.log(f"Voltmeter Name = {ljm.eReadNameString(self.handle, "DEVICE_NAME_DEFAULT")}")
+                #AIN0 is at REG ADDR 0
+                self.logger.log(f"V_{channel} = {ljm.eReadAddress(self.handle, address=0, dataType=ljm.constants.FLOAT32)}")
+
+            except:
+                self.logger.log_error(f"LJM cannot connect to Device: {data}")
+                return
+
+        if self.voltmeter_type == 'KEYSIGHT':
+            try:
+                if channel == 1:
+                    self._voltmeter_inst_1 = self.pyvisa_voltmeter_resources.open_resource(data)
+                    self.logger.log(f"Voltmeter IDN: {self._voltmeter_inst_1.query("*IDN?")}")
+                    self.logger.log(f"V_1 = {self._voltmeter_inst_1.query("MEAS:VOLT:DC? 10,0.001")}")
+                if channel == 2: 
+                    self._voltmeter_inst_2 = self.pyvisa_voltmeter_resources.open_resource(data)
+                    self.logger.log(f"Voltmeter IDN: {self._voltmeter_inst_2.query("*IDN?")}")
+                    self.logger.log(f"V_2 = {self._voltmeter_inst_2.query("MEAS:VOLT:DC? 10,0.001")}")
+            except:
+                self.logger.log_error(f"Pyvisa cannot connect to Device: {data}")
+                return
+        
         
     def disconnect_from_voltmeter(self):
         try: 
@@ -271,11 +396,11 @@ class GUI_Controller:
 
                     #VOLTMETER COMMUNICATION
                     else: 
-                        try:
-                            time.sleep(self.settle_delay)
-                            new_voltage_1 = self.read_voltage_1_()
-                            new_voltage_2 = self.read_voltage_2_()
-                        except: self.logger.log_error("Voltmeter Read Error")
+                    
+                        time.sleep(self.settle_delay)
+                        new_voltage_1 = self.read_voltage_1_()
+                        new_voltage_2 = self.read_voltage_2_()
+                        
                         
                     new_voltage_1_list.append(new_voltage_1)
                     new_voltage_2_list.append(new_voltage_2)
@@ -286,7 +411,7 @@ class GUI_Controller:
                     dpg.configure_item(f'v_1_data_{self._num_voltage_1_series}', x=wl_target_list, y=new_voltage_1_list)
                     dpg.configure_item(f'v_2_data_{self._num_voltage_2_series}', x=wl_target_list, y=new_voltage_2_list)
                     
-                    self.logger.log_info(f"V_1 = ({target_wl}, {new_voltage_1})" + "\n"+ "V_2 = ({target_wl}, {new_voltage_2})" + "\n" + "-"*60)
+                    self.logger.log_info(f"V_1 = ({target_wl}, {new_voltage_1})" + "\n"+ f"V_2 = ({target_wl}, {new_voltage_2})" + "\n" + "-"*60)
                 end_voltage_time = time.perf_counter()
                 voltage_time_list.append(end_voltage_time - start_voltage_time)
                 # ---------------------------------------------------------------------------------
@@ -462,11 +587,13 @@ class GUI_Controller:
 
     def open_DAC_table(self):
         with dpg.window(label="DAC LUT", pos=(932,32), height= self.SCREEN_HEIGHT-(self.window_buffer_size*10), width= 500) as DAC_table_window:
+            
             table_tag = dpg.generate_uuid()
             with dpg.table(header_row=True, tag=table_tag, row_background=True,
                         borders_innerH=True, borders_outerH=True, borders_innerV=True,
                         borders_outerV=True):
-                
+                        
+               
                 dpg.add_table_column(label="IDX")
                 dpg.add_table_column(label="FM DAC")
                 dpg.add_table_column(label="BM DAC")
@@ -698,9 +825,42 @@ class GUI_Controller:
         dpg.enable_item("scan_button")
         if self.logger_on: self.logger.log("Scan Reset")
 
+    def update_resolution_index(self, sender, data):
+        if data > 0: self.logger.log(f"Averaging Enabled, with index resolution: {data}")
+        if data == 0: self.logger.log(f"Averaging Disabled")
+        resolution_index = data
+        ljm.eWriteName(self.handle, f"{self.v1_channel}_RESOLUTION_INDEX", resolution_index)
+        ljm.eWriteName(self.handle, f"{self.v2_channel}_RESOLUTION_INDEX", resolution_index)
+        self.logger.log(f"{self.v1_channel} & {self.v2_channel} Resolution Index = {resolution_index}")
+
+    def update_T7_voltage_range(self, sender, data):
+
+        match data:
+            case '±10 volts': voltage_range_index = 1
+            case '±1 volts': voltage_range_index = 10
+            case '±0.1 volts': voltage_range_index = 100 
+            case '±0.01 volts': voltage_range_index = 1000
+
+        
+        if sender == 'v1_range_input': 
+            ljm.eWriteName(self.handle, f"{self.v1_channel}_RANGE", voltage_range_index)
+            self.logger.log(f"{self.v1_channel} Voltage Range: {data}")
+
+        if sender == 'v2_range_input': 
+            ljm.eWriteName(self.handle, f"{self.v2_channel}_RANGE", voltage_range_index)
+            self.logger.log(f"{self.v2_channel} Voltage Range: {data}")
+
+
+    def update_T7_channel(self, sender, data):
+        
+        if sender == 'v1_channel_combo': 
+            self.v1_channel = data
+            self.logger.log(f"V1 Channel = {data}")
+        if sender == 'v2_channel_combo': 
+            self.v2_channel = data
+            self.logger.log(f"V2 Channel = {data}")
 
     def voltage_config(self):
-
         config_width = 200
         if dpg.does_item_exist("voltage_config_window"): 
             dpg.show_item("voltage_config_window")
@@ -721,14 +881,85 @@ class GUI_Controller:
                 dpg.add_separator()
                 dpg.add_spacer(height=self.window_buffer_size)
 
-                self.voltmeter_resource_manager = pyvisa.ResourceManager()
-                voltmeter_resource_list = self.voltmeter_resource_manager.list_resources()
+                def int_to_ip(ip_int):
+                    # Pack the integer as a 32-bit unsigned network integer and convert to dotted string
+                    packed_ip = struct.pack('!I', ip_int & 0xFFFFFFFF)
+                    return socket.inet_ntoa(packed_ip)
+
+                self.pyvisa_voltmeter_resources = pyvisa.ResourceManager()
+                ljm_resources_untagged = ljm.listAll(ljm.constants.dtANY, ljm.constants.dtANY)
+                #(numFound, aDeviceTypes, aConnectionTypes, aSerialNumbers, aIPAddresses)
+                ljm_resources = []
+                #print(ljm_resources_untagged)
+                num_devices, labjack_types, connection_types, serial_numbers, IP_addresses = ljm_resources_untagged
+                for connection_type in connection_types: 
+                    if connection_type == 1: #USB
+                        this_index = connection_types.index(1)
+                        this_serial_number = serial_numbers[this_index]
+                        this_labjack_type = labjack_types[this_index]
+                        ljm_resources.append(f'USB0::{this_serial_number}::T{this_labjack_type}::LJM')
+                    if connection_type == 3: # ETHERNET
+                        this_index = connection_types.index(3)
+                        this_labjack_type = labjack_types[this_index]
+                        this_serial_number = serial_numbers[this_index]
+                        this_IP = IP_addresses[this_index]
+                        ljm_resources.append(f'ETHERNET::{this_serial_number}::'+int_to_ip(this_IP)+f'::T{this_labjack_type}::LJM')
+                
+                
+                self.voltmeter_resource_list = list(self.pyvisa_voltmeter_resources.list_resources()) + ljm_resources
+                voltmeter_resource_list = self.voltmeter_resource_list
+
+                dpg.add_checkbox(label="Hardware Averaging", callback=self.toggle_voltage_averaging)
+
                 dpg.add_text("Voltage Channel 1 Resource ")
                 voltmeter_connection_display_1 = dpg.add_combo(voltmeter_resource_list, width=config_width-16, default_value=self.default_voltmeter_1_connection, callback=self.connect_to_voltmeter,tag="volt_com_1")
 
+                v1_channel_combo = dpg.add_combo(
+                    default_value='AIN0',
+                    items=('AIN0', 'AIN1', 'AIN2', 'AIN3'),
+                    width=config_width-16,
+                    tag="v1_channel_combo",
+                    callback=self.update_T7_channel)
+            
+                resolution_index_input_1 = dpg.add_combo(
+                    items=('±10 volts','±1 volts','±0.1 volts','±0.01 volts'),
+                    default_value='±1 volts',
+                    width=config_width-16, 
+                    tag='v1_range_input',
+                    callback=self.update_T7_voltage_range)
+                
                 dpg.add_text("Voltage Channel 2 Resource ")
                 voltmeter_connection_display_2 = dpg.add_combo(voltmeter_resource_list, width=config_width-16, default_value=self.default_voltmeter_2_connection, callback=self.connect_to_voltmeter, tag="volt_com_2")
+                
+                v2_channel_combo = dpg.add_combo(
+                    default_value='AIN0',
+                    items=('AIN0', 'AIN1', 'AIN2', 'AIN3'),
+                    width=config_width-16, 
+                    tag="v2_channel_combo",
+                    callback=self.update_T7_channel)
+                
+                resolution_index_input_2 = dpg.add_combo(
+                    items=('±10 volts','±1 volts','±0.1 volts','±0.01 volts'),
+                    default_value='±1 volts',
+                    width=config_width-16, 
+                    tag='v2_range_input',
+                    callback=self.update_T7_voltage_range)
+                
+                dpg.add_separator()
+                dpg.add_spacer(height=self.window_buffer_size)
 
+                dpg.add_text("T7 Resolution Index")
+                resolution_index_input = dpg.add_input_int(
+                    default_value=0,
+                    min_value= 0, 
+                    max_value= 8,
+                    min_clamped=True, 
+                    max_clamped=True,
+                    width=config_width-16, 
+                    callback=self.update_resolution_index)
+                
+                
+                
                 dpg.add_separator()
                 dpg.add_spacer(height=self.window_buffer_size)
 
@@ -752,7 +983,7 @@ class GUI_Controller:
                 dpg.add_spacer(height=self.window_buffer_size)
 
     def laser_config(self):
-        
+    
         config_width = 200
         if dpg.does_item_exist("laser_config_window"): 
             dpg.show_item("laser_config_window")
@@ -794,10 +1025,9 @@ class GUI_Controller:
                 dpg.add_spacer(height=self.window_buffer_size)
 
                 #plot_button = dpg.add_button(label="Show Plot", width=config_width-16, callback=show_plot)
-                update_plot_buttom = dpg.add_button(label="Update DAC Plot", width = config_width-16, callback=self.update_DAC_plot)
-                self.toggle_unlock_plots_button = dpg.add_button(label="Unlock DAC Plot", width= config_width-16, callback=self.toggle_unlock_DAC_plot, tag="laser_config_unlock_plot_button")
-                dpg.add_separator()
-                dpg.add_spacer(height=self.window_buffer_size)
+                update_plot_button = dpg.add_button(label="Update Plot", width = config_width-16, callback=self.update_DAC_plot)
+                self.toggle_unlock_plots_button = dpg.add_button(label="Unlock Plot", width=config_width-16, callback=self.toggle_unlock_DAC_plot, tag="laser_config_unlock_plot_button")
+            
 
                 dpg.add_text("Packet Delay")
                 packet_delay_input = dpg.add_input_float(
@@ -943,7 +1173,7 @@ class GUI_Controller:
 
             self.open_logger()
             self.setup_laser()
-
+            
             with dpg.menu_bar():
                 with dpg.menu(label="View"):
                     dpg.add_menu_item(label="Logger", callback=self.open_logger)
