@@ -9,10 +9,9 @@ import random
 import matplotlib.pyplot as plt
 import matplotlib
 from types import FunctionType
-import DBR_FP4209.jamGUI.Instatune as dbr
+import Instatune as dbr
 import generate_table as table
 import pyvisa
-
 from labjack import ljm
 import socket
 import struct
@@ -23,46 +22,45 @@ import shutil
 
 class GUI_Controller:
     def __init__(self, debug: bool = False):
-        self.debug = debug
+        self.debug: bool = debug
         self.logger_on: bool = True #if false, most class methods will not print update statements in logger in the GUI. some will still print: (Serial and Voltmeter connection info, etc.)
 
         # scan control tracking
-        self.packet_delay: float = 0.0
-        self.settle_delay: float = 0.0
-        self.scan_tracker = 1627.5 #x value of scan tracker line on DAC plot, and table index.
-        self.scan_running = False
-        self.scan_paused = False
-        self.log_voltage = True
+        self.packet_delay: float = 0.0 #delay between sets of four DAC packets
+        self.settle_delay: float = 0.0 #delay between sending DAC packets and reading voltage 
+        self.scan_tracker: float = 1627.5 #x value of scan tracker line on DAC plot, and table index.
+        self.scan_running: bool = False
+        self.scan_paused: bool = False
+        self.log_voltage: bool = True
 
         #  scan parameters for DBR object init
-        self.start_wl = 1627.5
-        self.end_wl = 1672.4955
-        self.interpolation_type = "true_linear"
-        self.interpolation_value = 0
-        self.sending_packets = True
+        self.start_wl: float = 1627.5
+        self.end_wl: float = 1672.4955
+        self.interpolation_type: str = "true_linear"
+        self.interpolation_value: int = 0 #number of points interpolated between the points given by the default LUT 'UU341_LUT_0v0.csv'
+        self.sending_packets: bool = True 
 
         # GUI Display parameters
         monitors = []
         for monitor in screeninfo.get_monitors(): monitors.append(monitor)
 
         monitor = monitors[0]
-        self.SCREEN_WIDTH = monitor.width
-        self.SCREEN_HEIGHT = monitor.height - 50
+        self.SCREEN_WIDTH: int = monitor.width # in pixels
+        self.SCREEN_HEIGHT: int = monitor.height - 50
 
-        #self.SCREEN_HEIGHT = 480    
-        #self.SCREEN_WIDTH = 854
-        self.window_buffer_size = 8
-        self.DAC_plot_unlocked = False
-        self.voltage_plots_unlocked = False
+        self.window_buffer_size: int = 8 # in pixels
+        self.DAC_plot_unlocked: bool = False
+        self.voltage_plots_unlocked: bool = False
 
         # file management and plotting parameters
         self.saving_LUT = True
         self.new_plot_path = 'default path'
         self._num_voltage_1_series = 0
         self._num_voltage_2_series = 0
-        self.voltage_1_data: list[tuple] = []
+        self.voltage_1_data: list[tuple] = [] #used and reset per scan
         self.voltage_2_data: list[tuple] = []
-        self.DAC_list = [[],[],[],[],[],[]]
+        self.DAC_list: list[list] = [[],[],[],[],[],[]]
+        self.LUT_Path: Path = Path('jamGUI/UU341_LUT_0v0.csv') #used by config files
 
         #updated after scan completes or data is pushed via save voltage button
         self.voltage_1_data_all: list[list[tuple]] = [] 
@@ -70,29 +68,33 @@ class GUI_Controller:
         
         # FP4029 Serial Communication parameters
         self.default_port_name = "COM4"
-        self.port_name = "COM4"
+        self.port_name = "COM4" #this is distinct from self.port that is created as a Port object at runtime. 
 
-        # Voltmeter pyvisa communication parameters
-        self.default_voltmeter_1_connection = "USB0::0x2A8D::0x1601::MY60077980::INSTR"
+        # Voltmeter parameters
+        self.default_voltmeter_1_connection = "USB0::0x2A8D::0x1601::MY60077980::INSTR" #KEYSIGHT
         self.default_voltmeter_2_connection = "USB0::0x2A8D::0x1601::MY60077980::INSTR"
-        self.voltage_hardware_averaging = False
-        self.software_averaging = False
-        self.v1_channel = 'AIN0'
-        self.v2_channel = 'AIN0'
+        self.voltage_hardware_averaging: bool = False #currently broken/ working weirdly.
+        self.software_averaging: bool = False
+        self.software_averaging_number_of_samples_per_measurement: int = 200
+        self.using_stream_mode: bool = False
+        self.v1_channel: str = 'AIN0'
+        self.v2_channel: str = 'AIN0'
 
-        
         self.TIME = datetime.now()
-        self.CWD = os.path.dirname(os.path.realpath(__file__))
-        self.TEMP_DIR = self.CWD + '/temp'
+        self.CWD: str = os.path.dirname(os.path.realpath(__file__))
+        self.TEMP_DIR: str = self.CWD + '/temp'
+
+        #reset /temp
         try:
-            shutil.rmtree(self.TEMP_DIR)
+            shutil.rmtree(self.TEMP_DIR) #delete directory and contents
         except:
             print('Temp does not exist')
-        Path(self.TEMP_DIR).mkdir(parents=True, exist_ok=True)
+        Path(self.TEMP_DIR).mkdir(parents=True, exist_ok=True) #create directory
 
-        dpg.create_context()
-        matplotlib.use('Agg')
+        dpg.create_context() #starts dearpygui context
+        matplotlib.use('Agg') #allows use of matplotlib with threading
 
+## LASER CONTROL FUNCTIONS -----------------------------------------------------------------------------------------------
     def setup_laser(self):
         try: 
             print(self.port)
@@ -106,7 +108,7 @@ class GUI_Controller:
                 interpolation_value = self.interpolation_value, 
                 saving_LUT = self.saving_LUT)
             if self.logger_on: self.logger.log("Laser Setup Updated")
-            self.DAC_list, logger_message = self.Laser.get_table()
+            self.DAC_list, logger_message, path = self.Laser.get_table()
             if self.logger_on: self.logger.log(logger_message)
             return
 
@@ -120,7 +122,8 @@ class GUI_Controller:
                 port = self.port)
         
         if self.logger_on: self.logger.log("Laser Setup Updated")
-        self.DAC_list, logger_message = self.Laser.get_table()
+        self.DAC_list, logger_message, path = self.Laser.get_table()
+        self.LUT_Path = path
         if self.logger_on: self.logger.log(logger_message)
 
     def log_available_ports(self):
@@ -178,7 +181,19 @@ class GUI_Controller:
         if self.logger_on: 
             self.logger.log("Laser Disabled")
             self.logger.log(f"Voltage: {self.read_voltage_1_()}")
+                
+    def check_if_laser_on(self):
+        response, res_bool = self.Laser.check_if_on()
+        name, status, status_message, gain_value = response
+        if self.logger_on: self.logger.log_info(f'{name} : {status} : {status_message}{gain_value} \n')
 
+    def update_com_port(self, sender, data):
+        self.port_name = data
+        #self.connect_to_laser()
+        self.Laser.set_default_serial_port(self.port_name)
+        self.logger.log(f"Will Connect to Port: {self.port_name}")
+
+## VOLTMETER CONTROL FUNCTIONS -----------------------------------------------------------------------------------------------
     def toggle_voltage_averaging(self, sender, data):
 
         if sender == "hardware":
@@ -222,7 +237,6 @@ class GUI_Controller:
             except ljm.LJMError as e:
                 self.logger.log_error(f"LJM Error occurred: {e}")
 
-        
     def read_voltage_1_(self) -> float:
         '''
         try: self._voltmeter_inst_1
@@ -234,23 +248,34 @@ class GUI_Controller:
         if self.voltmeter_type == "LJM":
             #self.logger.log_debug("T7")
             if self.voltage_hardware_averaging:
+                #print("averaging?")
                 averaged_voltage = float()
                 try: 
                     # 4. Perform a single read of the averaged samples
                     # Reading _READ_A explicitly triggers the T7 to capture the burst and average it
                     averaged_voltage = ljm.eReadName(self.handle, f"{self.v1_channel}_EF_READ_A")
-                    _max = ljm.eReadName(self.handle, f"{self.v1_channel}_EF_READ_B")
-                    _min = ljm.eReadName(self.handle, f"{self.v1_channel}_EF_READ_C")
                     self.logger.log(f"Averaged Reading: {averaged_voltage:.5f} V")
-                    self.logger.log(f"{_max}, {_min}, {averaged_voltage}")
 
                 except ljm.LJMError as e:
                     self.logger.log_error(f"LJM Error occurred: {e}")
 
                 return averaged_voltage
+            
+            elif self.software_averaging:
+                if not self.using_stream_mode:
+                    address = int(self.v1_channel[-1])*2
+                    self.logger.log(f"{address}")
+                    sample = []
+                    for i in range(self.software_averaging_number_of_samples_per_measurement): 
+                        x = ljm.eReadAddress(self.handle, address=address, dataType=ljm.constants.FLOAT32)
+                        sample.append(x)
+                    return np.mean(sample)
+                if self.using_stream_mode:
+                    self.logger.log_error("Stream mode not implemented")
+                    return 0
             else: 
+                #print("not averaging")
                 #self.logger.log_debug("T7")
-                #self.logger.log(f"Channel = {int(self.v1_channel[-1])}")
                 address = int(self.v1_channel[-1])*2
                 self.logger.log(f"{address}")
                 return ljm.eReadAddress(self.handle, address=address, dataType=ljm.constants.FLOAT32)
@@ -280,14 +305,17 @@ class GUI_Controller:
                 return averaged_voltage
             
             elif self.software_averaging:
-                address = int(self.v2_channel[-1])*2
-                self.logger.log(f"{address}")
-                sample = []
-                for i in range(10): 
-                    x = ljm.eReadAddress(self.handle, address=address, dataType=ljm.constants.FLOAT32)
-                    sample.append(x)
-                return np.mean(sample)
-
+                if not self.using_stream_mode:
+                    address = int(self.v2_channel[-1])*2
+                    self.logger.log(f"{address}")
+                    sample = []
+                    for i in range(self.software_averaging_number_of_samples_per_measurement): 
+                        x = ljm.eReadAddress(self.handle, address=address, dataType=ljm.constants.FLOAT32)
+                        sample.append(x)
+                    return np.mean(sample)
+                if self.using_stream_mode:
+                    self.logger.log_error("Stream mode not implemented")
+                    return 0
             else: 
                 #print("not averaging")
                 #self.logger.log_debug("T7")
@@ -346,13 +374,46 @@ class GUI_Controller:
                 self.logger.log_error(f"Pyvisa cannot connect to Device: {data}")
                 return
         
-        
     def disconnect_from_voltmeter(self):
         try: 
             self._voltmeter_inst.close()
         except: 
             self.logger.log_error(f'Voltmeter instance not found')
 
+    def update_resolution_index(self, sender, data):
+        if data > 0: self.logger.log(f"Averaging Enabled, with index resolution: {data}")
+        if data == 0: self.logger.log(f"Averaging Disabled")
+        resolution_index = data
+        ljm.eWriteName(self.handle, f"{self.v1_channel}_RESOLUTION_INDEX", resolution_index)
+        ljm.eWriteName(self.handle, f"{self.v2_channel}_RESOLUTION_INDEX", resolution_index)
+        self.logger.log(f"{self.v1_channel} & {self.v2_channel} Resolution Index = {resolution_index}")
+
+    def update_T7_voltage_range(self, sender, data):
+
+        match data:
+            case '±10 volts': voltage_range_index = 1
+            case '±1 volts': voltage_range_index = 10
+            case '±0.1 volts': voltage_range_index = 100 
+            case '±0.01 volts': voltage_range_index = 1000
+
+        if sender == 'v1_range_input': 
+            ljm.eWriteName(self.handle, f"{self.v1_channel}_RANGE", voltage_range_index)
+            self.logger.log(f"{self.v1_channel} Voltage Range: {data}")
+
+        if sender == 'v2_range_input': 
+            ljm.eWriteName(self.handle, f"{self.v2_channel}_RANGE", voltage_range_index)
+            self.logger.log(f"{self.v2_channel} Voltage Range: {data}")
+
+    def update_T7_channel(self, sender, data):
+        
+        if sender == 'v1_channel_combo': 
+            self.v1_channel = data
+            self.logger.log(f"V1 Channel = {data}")
+        if sender == 'v2_channel_combo': 
+            self.v2_channel = data
+            self.logger.log(f"V2 Channel = {data}")
+
+## SCAN FUNCTIONS -----------------------------------------------------------------------------------------------
     def get_duplicates(self, data:list):
         from collections import Counter
         # Convert sublists to tuples to make them hashable
@@ -492,12 +553,46 @@ class GUI_Controller:
         self.voltage_1_data_all.append(v1_data)
         self.voltage_2_data_all.append(v2_data)
 
-    def import_LUT(self):
-        def update_DAC_table(path):
+    def toggle_scan(self):
+        if not self.scan_running:
+            self.scan_running = True
+            self.scan_paused = False
+            scan_thread = threading.Thread(target=self._scan, args=(), daemon=True)
+            scan_thread.start()
+            if self.logger_on: self.logger.log("Scan Started")
+            dpg.set_item_label("laser_config_scan_button", "Pause")
+            dpg.set_item_label("voltage_config_scan_button", "Pause")
+        else:
+            if not self.scan_paused:
+                self.scan_paused = True
+                if self.logger_on: self.logger.log("Scan Paused")
+                dpg.set_item_label("laser_config_scan_button", "Resume")
+                dpg.set_item_label("voltage_config_scan_button", "Resume")
+                dpg.show_item("laser_config_reset_scan_button")
+                dpg.show_item("voltage_config_reset_scan_button")
+                return
+            self.scan_paused = False
+            if self.logger_on: self.logger.log("Scan Resumed")
+            dpg.set_item_label("laser_config_scan_button", "Pause")
+            dpg.set_item_label("voltage_config_scan_button", "Pause")
+
+    def reset_scan(self):
+        self.scan_running = False
+        self.scan_paused = False
+        self.scan_tracker = 1627.5
+        dpg.set_item_label("laser_config_scan_button", "Start Scan")
+        dpg.set_item_label("voltage_config_scan_button", "Start Scan")
+        dpg.enable_item("scan_button")
+        if self.logger_on: self.logger.log("Scan Reset")
+
+## GUI CONFIG CALLBACK FUNCTIONS -----------------------------------------------------------------------------------------------
+    def update_DAC_table(self, path):
             t = table.DAC_Table()
             self.DAC_list = t.get_DAC_arrays(path)
-            
-        self.open_file_browser(choose_dir=False, callback_function=update_DAC_table)
+            self.LUT_Path = path
+
+    def import_LUT(self):
+        self.open_file_browser(choose_dir=False, callback_function=self.update_DAC_table)
         self.update_DAC_plot()
 
     def update_plot_path(self, path):
@@ -556,6 +651,79 @@ class GUI_Controller:
         self.interpolation_value = data
         if self.logger_on: self.logger.log(f"Interp Value = {self.interpolation_value}")
 
+    def open_DAC_table(self):
+        with dpg.window(label="DAC LUT", pos=(932,32), height= self.SCREEN_HEIGHT-(self.window_buffer_size*10), width= 500) as DAC_table_window:
+            
+            table_tag = dpg.generate_uuid()
+            with dpg.table(header_row=True, tag=table_tag, row_background=True,
+                        borders_innerH=True, borders_outerH=True, borders_innerV=True,
+                        borders_outerV=True):
+                        
+               
+                dpg.add_table_column(label="IDX")
+                dpg.add_table_column(label="FM DAC")
+                dpg.add_table_column(label="BM DAC")
+                dpg.add_table_column(label="PH DAC")
+                dpg.add_table_column(label="SOA DAC")
+                dpg.add_table_column(label="WL Target")
+
+                for i in range(len(self.DAC_list[0])):
+                    with dpg.table_row():
+                        for j in range(0, 6):
+                            text_tag = dpg.add_text(f"{self.DAC_list[j][i]}")
+
+    def open_logger(self):
+        def create_logger_window():
+            dpg.add_window(label="Logger", pos=(932,32), height= self.SCREEN_HEIGHT-(self.window_buffer_size*18), width=650, tag="logger_window")
+            self.logger = dpg_logger.mvLogger(parent="logger_window")
+
+        if not dpg.does_item_exist("logger_window"):
+            create_logger_window()
+
+        if not dpg.is_item_shown("logger_window"):
+            dpg.show_item("logger_window")
+
+        dpg.focus_item("logger_window")
+
+    def toggle_unlock_DAC_plot(self):
+        if not self.DAC_plot_unlocked:
+            self.DAC_plot_unlocked = True
+            if self.logger_on: self.logger.log("DAC Plot View Unlocked")
+            dpg.set_axis_limits_auto(axis='DAC_xaxis')
+            dpg.set_axis_limits_auto(axis='DAC_yaxis')
+            dpg.set_item_label("laser_config_unlock_plot_button", "Lock Plots")
+        else:
+            self.DAC_plot_unlocked = False
+            dpg.set_axis_limits(axis='DAC_xaxis', ymin=1627, ymax=1673)
+            dpg.set_axis_limits(axis='DAC_yaxis', ymin=-10000, ymax=70000)
+
+            if self.logger_on: self.logger.log("DAC Plot View Locked")
+            dpg.set_item_label("laser_config_unlock_plot_button", "Unlock Plots")
+
+    def toggle_unlock_voltage_plots(self):
+        if not self.voltage_plots_unlocked:
+            self.voltage_plots_unlocked = True
+            if self.logger_on: self.logger.log("Voltage Plot View Unlocked")
+            dpg.set_axis_limits_auto(axis='V_1_xaxis')
+            dpg.set_axis_limits_auto(axis='V_2_xaxis')
+            dpg.set_item_label("voltage_config_unlock_plot_button", "Lock Plots")
+        else:
+            self.voltage_plots_unlocked = False
+            dpg.set_axis_limits(axis='V_1_xaxis', ymin=1627, ymax=1673)
+            dpg.set_axis_limits(axis='V_2_xaxis', ymin=1627, ymax=1673)
+
+            if self.logger_on: self.logger.log("Voltage Plot View Locked")
+            dpg.set_item_label("voltage_config_unlock_plot_button", "Unlock Plots")
+
+    def toggle_save_LUT(self, sender, data):
+        self.saving_LUT = bool(data)
+        if self.logger_on: self.logger.log(f"Saving Generated Tables = {self.saving_LUT}")
+
+    def clear_voltage_plot(self):
+        dpg.delete_item("V_1_yaxis", children_only=True)
+        dpg.delete_item("V_2_yaxis", children_only=True)
+
+## REALTIME PLOTTING FUNCTIONS -----------------------------------------------------------------------------------------------
     def update_DAC_plot(self): 
         plot_width = self.SCREEN_WIDTH-240
         plot_height = self.SCREEN_HEIGHT - (15*self.window_buffer_size)
@@ -627,18 +795,12 @@ class GUI_Controller:
             dpg.add_plot_axis(dpg.mvYAxis, parent="voltage_2_plot", label="Voltage", tag="V_2_yaxis")
             dpg.set_axis_limits(axis='V_2_xaxis', ymin=1627, ymax=1673)
             #self.add_voltage_series()
-            
-    def check_if_laser_on(self):
-        response, res_bool = self.Laser.check_if_on()
-        name, status, status_message, gain_value = response
-        if self.logger_on: self.logger.log_info(f'{name} : {status} : {status_message}{gain_value} \n')
+    
+    def update_software_averaging_number(self, sender, data):
+        self.software_averaging_number_of_samples_per_measurement = int(data)
+        self.logger.log(f"Number of samples taken per target wavelength = {int(data)}")
 
-    def update_com_port(self, sender, data):
-        self.port_name = data
-        #self.connect_to_laser()
-        self.Laser.set_default_serial_port(self.port_name)
-        self.logger.log(f"Will Connect to Port: {self.port_name}")
-
+## FILE MANAGEMENT FUNCTIONS -----------------------------------------------------------------------------------------------
     def load_project_file(path): #NOTE: NOT IMPLEMENTED
         pass
 
@@ -647,138 +809,6 @@ class GUI_Controller:
 
     def save_project_file(self, sender, data): #NOTE: NOT IMPLEMENTED
         if self.logger_on: self.logger.log(f"Saving Current Project")
-
-    def open_DAC_table(self):
-        with dpg.window(label="DAC LUT", pos=(932,32), height= self.SCREEN_HEIGHT-(self.window_buffer_size*10), width= 500) as DAC_table_window:
-            
-            table_tag = dpg.generate_uuid()
-            with dpg.table(header_row=True, tag=table_tag, row_background=True,
-                        borders_innerH=True, borders_outerH=True, borders_innerV=True,
-                        borders_outerV=True):
-                        
-               
-                dpg.add_table_column(label="IDX")
-                dpg.add_table_column(label="FM DAC")
-                dpg.add_table_column(label="BM DAC")
-                dpg.add_table_column(label="PH DAC")
-                dpg.add_table_column(label="SOA DAC")
-                dpg.add_table_column(label="WL Target")
-
-                for i in range(len(self.DAC_list[0])):
-                    with dpg.table_row():
-                        for j in range(0, 6):
-                            text_tag = dpg.add_text(f"{self.DAC_list[j][i]}")
-
-    def open_logger(self):
-        def create_logger_window():
-            dpg.add_window(label="Logger", pos=(932,32), height= self.SCREEN_HEIGHT-(self.window_buffer_size*18), width=650, tag="logger_window")
-            self.logger = dpg_logger.mvLogger(parent="logger_window")
-
-        if not dpg.does_item_exist("logger_window"):
-            create_logger_window()
-
-        if not dpg.is_item_shown("logger_window"):
-            dpg.show_item("logger_window")
-
-        dpg.focus_item("logger_window")
-
-    def toggle_unlock_DAC_plot(self):
-        if not self.DAC_plot_unlocked:
-            self.DAC_plot_unlocked = True
-            if self.logger_on: self.logger.log("DAC Plot View Unlocked")
-            dpg.set_axis_limits_auto(axis='DAC_xaxis')
-            dpg.set_axis_limits_auto(axis='DAC_yaxis')
-            dpg.set_item_label("laser_config_unlock_plot_button", "Lock Plots")
-        else:
-            self.DAC_plot_unlocked = False
-            dpg.set_axis_limits(axis='DAC_xaxis', ymin=1627, ymax=1673)
-            dpg.set_axis_limits(axis='DAC_yaxis', ymin=-10000, ymax=70000)
-
-            if self.logger_on: self.logger.log("DAC Plot View Locked")
-            dpg.set_item_label("laser_config_unlock_plot_button", "Unlock Plots")
-
-    def toggle_unlock_voltage_plots(self):
-        if not self.voltage_plots_unlocked:
-            self.voltage_plots_unlocked = True
-            if self.logger_on: self.logger.log("Voltage Plot View Unlocked")
-            dpg.set_axis_limits_auto(axis='V_1_xaxis')
-            dpg.set_axis_limits_auto(axis='V_2_xaxis')
-            dpg.set_item_label("voltage_config_unlock_plot_button", "Lock Plots")
-        else:
-            self.voltage_plots_unlocked = False
-            dpg.set_axis_limits(axis='V_1_xaxis', ymin=1627, ymax=1673)
-            dpg.set_axis_limits(axis='V_2_xaxis', ymin=1627, ymax=1673)
-
-            if self.logger_on: self.logger.log("Voltage Plot View Locked")
-            dpg.set_item_label("voltage_config_unlock_plot_button", "Unlock Plots")
-
-    def toggle_save_LUT(self, sender, data):
-        self.saving_LUT = bool(data)
-        if self.logger_on: self.logger.log(f"Saving Generated Tables = {self.saving_LUT}")
-
-    def create_DAC_plot_file(self, path:str):
-        self.logger.log("test DAC")
-        fig, ax = plt.subplots()
-        plt.gcf().set_size_inches(8,6)
-        self.logger.log("Creating DAC Plot")
-        idx, wl, fm, bm, ph, soa = self.DAC_list[0], self.DAC_list[5], self.DAC_list[1], self.DAC_list[2], self.DAC_list[3], self.DAC_list[4]
-
-        ax.plot(wl, fm, 'o--', ms=0.85, linewidth=0.5, label=f"FM")
-        ax.plot(wl, bm, 'o--', ms=0.85, linewidth=0.5, label=f"BM")
-        ax.plot(wl, ph, 'o--', ms=0.85, linewidth=0.5, label=f"PH")
-        ax.plot(wl, soa, 'o--', ms=0.85, linewidth=0.5, label=f"SOA")
-        
-        plt.xlabel('Wavelength')
-        plt.ylabel("DAC Values")
-        plt.legend()
-
-        if not self.interpolation_value: plt.title(f'Default DAC Parameters ({self.start_index}, {self.end_index})')
-        if self.interpolation_value > 0 and self.interpolation_type == "true_linear": 
-            plt.title(f'DAC Parameters ({self.start_index}, {self.end_index}) Interpolated with {self.interpolation_value} Intermediate Integer Values')
-        if self.interpolation_value > 0 and self.interpolation_type == "linear_extrapolation": 
-            plt.title(f'DAC Parameters ({self.start_index}, {self.end_index}) Extrapolated with {self.interpolation_value} Intermediate Integer Values')
-        if self.interpolation_value > 0 and self.interpolation_type == "line_fit": 
-            plt.title(f'DAC Parameters ({self.start_index}, {self.end_index}) Extrapolated with {self.interpolation_value} Intermediate Integer Values')
-        file_path = ''
-        if self.interpolation_type == "true_linear": file_path = path+f'/DAC_True_Linear_({self.interpolation_value}, {self.start_index}, {self.end_index}).pdf'
-        if self.interpolation_type == "linear_extrapolation": file_path = path+f'/DAC_Linear_Extrapolation_({self.interpolation_value}, {self.start_index}, {self.end_index}).pdf'
-        if self.interpolation_type == "line_fit": file_path = path+f'/DAC_Line_Fit_({self.interpolation_value}, {self.start_index}, {self.end_index}).pdf'
-
-        plt.savefig(file_path, format='pdf')
-        self.logger.log(f"DAC Plot Saved in: {file_path}")
-        plt.close()
-
-    def create_voltage_plot_file(self, path, wl_list, voltage_list):
-        
-        fig, ax = plt.subplots()
-        plt.gcf().set_size_inches(8,6)
-        self.logger.log("Creating Voltage Channel 1 Plot")
-
-        ax.plot(wl_list, voltage_list, 'o--', ms=0.85, linewidth=0.5, label=f"Voltage Channel 1")
-
-        plt.xlabel('Wavelength')
-        plt.ylabel("Voltage")
-        plt.legend()
-
-        if not self.interpolation_value: plt.title(f'Voltage with Default LUT ({self.start_index}, {self.end_index})')
-        if self.interpolation_value > 0 and self.interpolation_type == "true_linear": 
-            plt.title(f'Voltage Data ({self.start_index}, {self.end_index}) LUT Interpolated with {self.interpolation_value} Intermediate Integer Values')
-        if self.interpolation_value > 0 and self.interpolation_type == "linear_extrapolation": 
-            plt.title(f'Voltage Data ({self.start_index}, {self.end_index}) LUT Extrapolated with {self.interpolation_value} Intermediate Integer Values')
-        if self.interpolation_value > 0 and self.interpolation_type == "line_fit": 
-            plt.title(f'Voltage Data ({self.start_index}, {self.end_index}) LUT Extrapolated with {self.interpolation_value} Intermediate Integer Values')
-        file_path = ''
-        if self.interpolation_type == "true_linear": file_path = path+f'/V_True_Linear_({self.interpolation_value}, {self.start_index}, {self.end_index}).pdf'
-        if self.interpolation_type == "linear_extrapolation": file_path = path+f'/V_Linear_Extrapolation_({self.interpolation_value}, {self.start_index}, {self.end_index}).pdf'
-        if self.interpolation_type == "line_fit": file_path = path+f'/V_Line_Fit_({self.interpolation_value}, {self.start_index}, {self.end_index}).pdf'
-
-        plt.savefig(file_path, format='pdf')
-        if self.logger_on: self.logger.log(f"Voltage Plot Saved in: {file_path}")
-        plt.close()
-
-    def clear_voltage_plot(self):
-        dpg.delete_item("V_1_yaxis", children_only=True)
-        dpg.delete_item("V_2_yaxis", children_only=True)
 
     def open_file_browser(self, choose_dir: bool, callback_function: FunctionType):
 
@@ -805,24 +835,6 @@ class GUI_Controller:
                 callback= close_browser
             )
 
-    def export_voltage_plot(self):
-        def create_voltage_plots(path):
-            wl_list = []
-            voltage_list = []
-            for pair in self.voltage_1_data:
-                target_wl, voltage = pair
-                wl_list.append(target_wl)
-                voltage_list.append(voltage)
-            self.create_voltage_plot_file(path, wl_list, voltage_list)
-            
-        self.open_file_browser(choose_dir=True, callback_function=create_voltage_plots)
-
-    def export_DAC_plot(self):
-        def create_DAC_plot(path):
-            self.create_DAC_plot_file(path)
-
-        self.open_file_browser(choose_dir=True, callback_function=create_DAC_plot)
-    
     def export_voltage_data(self):
         self.open_file_browser(choose_dir=True, callback_function=self.write_voltage_data)
 
@@ -840,12 +852,58 @@ class GUI_Controller:
             'start_wavelength': self.start_wl,
             'end_wavelength': self.end_wl,
             'interpolation_type': self.interpolation_type,
-            'self.interpolation_value': self.interpolation_value
+            'interpolation_value': self.interpolation_value,
+            'voltage_hardware_averaging': self.voltage_hardware_averaging,
+            'software_averaging': self.software_averaging,
+            'software_averaging_number_of_samples_per_measurement': self.software_averaging_number_of_samples_per_measurement,
+            'using_stream_mode': self.using_stream_mode,
+            'v1_channel': self.v1_channel,
+            'v2_channel': self.v2_channel,
+            'LUT_Path': self.LUT_Path
         }
 
         # Writing the data to a YAML file
         with open(f'{given_path}/scan_config_{series_index}.yaml', 'w') as file:
-            yaml.dump(data, file)
+            yaml.safe_dump(data, file)
+
+    def load_yaml_config(self):
+        def read_yaml_file(given_path):
+            import yaml
+            with open(given_path, "r") as file:
+                cfg = yaml.safe_load(file)
+            self.debug = cfg['debug']
+            self.logger.log(f"Debug = {self.debug}")
+            self.packet_delay= cfg['packet_delay']
+            self.logger.log(f"Packet Delay = {self.packet_delay}")
+            self.settle_delay= cfg['settle_delay']
+            self.logger.log(f"Settle Delay = {self.settle_delay}")
+            self.start_wl= cfg['start_wavelength']
+            self.logger.log(f"Start Wavelength = {self.start_wl}")
+            self.end_wl= cfg['end_wavelength']
+            self.logger.log(f"End Wavelength = {self.end_wl}")
+            self.interpolation_type= cfg['interpolation_type']
+            self.logger.log(f"Interpolation Type = {self.interpolation_type}")
+            self.interpolation_value= cfg['interpolation_value']
+            self.logger.log(f"Interpolation Value = {self.interpolation_value}")
+            self.voltage_hardware_averaging= cfg['voltage_hardware_averaging']
+            self.logger.log(f"Hardware Averaging= {self.voltage_hardware_averaging}")
+            self.software_averaging= cfg['software_averaging']
+            self.logger.log(f"Software Averaging = {self.software_averaging}")
+            self.software_averaging_number_of_samples_per_measurement = cfg['software_averaging_number_of_samples_per_measurement']
+            self.logger.log(f"Software Avg. number of Samples per Measurement = {self.software_averaging_number_of_samples_per_measurement}")
+            self.using_stream_mode = cfg['using_stream_mode']
+            self.logger.log(f"Using T7 Streaming Mode = {self.using_stream_mode}")
+            self.v1_channel = cfg['v1_channel']
+            self.logger.log(f"V1 Channel = {self.v1_channel}")
+            self.v2_channel = cfg['v2_channel']
+            self.logger.log(f"V2 Channel = {self.v2_channel}")
+            self.LUT_Path = cfg['LUT_Path']
+            self.update_DAC_table(self.LUT_Path)
+            self.update_DAC_plot()
+            self.logger.log(f"LUT Path Updated to: \n {self.LUT_Path}")
+            self.logger.log("Updated Laser and Voltmeter Configuration")
+
+        self.open_file_browser(choose_dir=False, callback_function=read_yaml_file)
 
     def write_voltage_data(self, given_path, series_list: list|str = 'ALL'):
         '''
@@ -915,73 +973,7 @@ class GUI_Controller:
 
         if self.logger_on: self.logger.log(f"Voltage Data Saved in: {given_path}")
         
-    def toggle_scan(self):
-        if not self.scan_running:
-            self.scan_running = True
-            self.scan_paused = False
-            scan_thread = threading.Thread(target=self._scan, args=(), daemon=True)
-            scan_thread.start()
-            if self.logger_on: self.logger.log("Scan Started")
-            dpg.set_item_label("laser_config_scan_button", "Pause")
-            dpg.set_item_label("voltage_config_scan_button", "Pause")
-        else:
-            if not self.scan_paused:
-                self.scan_paused = True
-                if self.logger_on: self.logger.log("Scan Paused")
-                dpg.set_item_label("laser_config_scan_button", "Resume")
-                dpg.set_item_label("voltage_config_scan_button", "Resume")
-                dpg.show_item("laser_config_reset_scan_button")
-                dpg.show_item("voltage_config_reset_scan_button")
-                return
-            self.scan_paused = False
-            if self.logger_on: self.logger.log("Scan Resumed")
-            dpg.set_item_label("laser_config_scan_button", "Pause")
-            dpg.set_item_label("voltage_config_scan_button", "Pause")
-
-    def reset_scan(self):
-        self.scan_running = False
-        self.scan_paused = False
-        self.scan_tracker = 1627.5
-        dpg.set_item_label("laser_config_scan_button", "Start Scan")
-        dpg.set_item_label("voltage_config_scan_button", "Start Scan")
-        dpg.enable_item("scan_button")
-        if self.logger_on: self.logger.log("Scan Reset")
-
-    def update_resolution_index(self, sender, data):
-        if data > 0: self.logger.log(f"Averaging Enabled, with index resolution: {data}")
-        if data == 0: self.logger.log(f"Averaging Disabled")
-        resolution_index = data
-        ljm.eWriteName(self.handle, f"{self.v1_channel}_RESOLUTION_INDEX", resolution_index)
-        ljm.eWriteName(self.handle, f"{self.v2_channel}_RESOLUTION_INDEX", resolution_index)
-        self.logger.log(f"{self.v1_channel} & {self.v2_channel} Resolution Index = {resolution_index}")
-
-    def update_T7_voltage_range(self, sender, data):
-
-        match data:
-            case '±10 volts': voltage_range_index = 1
-            case '±1 volts': voltage_range_index = 10
-            case '±0.1 volts': voltage_range_index = 100 
-            case '±0.01 volts': voltage_range_index = 1000
-
-        
-        if sender == 'v1_range_input': 
-            ljm.eWriteName(self.handle, f"{self.v1_channel}_RANGE", voltage_range_index)
-            self.logger.log(f"{self.v1_channel} Voltage Range: {data}")
-
-        if sender == 'v2_range_input': 
-            ljm.eWriteName(self.handle, f"{self.v2_channel}_RANGE", voltage_range_index)
-            self.logger.log(f"{self.v2_channel} Voltage Range: {data}")
-
-
-    def update_T7_channel(self, sender, data):
-        
-        if sender == 'v1_channel_combo': 
-            self.v1_channel = data
-            self.logger.log(f"V1 Channel = {data}")
-        if sender == 'v2_channel_combo': 
-            self.v2_channel = data
-            self.logger.log(f"V2 Channel = {data}")
-
+## GUI WINDOW MANAGEMENT -----------------------------------------------------------------------------------------------
     def voltage_config(self):
         config_width = 200
         if dpg.does_item_exist("voltage_config_window"): 
@@ -996,9 +988,9 @@ class GUI_Controller:
                 no_move=True,
                 tag="voltage_config_window") as voltage_config_window:
                 
-                debug_button = dpg.add_checkbox(label="Debug Mode", default_value=self.debug, callback=self.toggle_debug, tag="voltage_config_toggle_debug_button")
-                logger_button = dpg.add_checkbox(label="Log Output", default_value=True, callback=self.toggle_logger_on, tag="voltage_config_toggle_logger_button")
-                voltage_button = dpg.add_checkbox(label="Read Voltage", default_value=self.log_voltage, callback=self.toggle_log_voltage, tag="voltage_config_toggle_log_voltage_button")
+                dpg.add_checkbox(label="Debug Mode", default_value=self.debug, callback=self.toggle_debug, tag="voltage_config_toggle_debug_button")
+                dpg.add_checkbox(label="Log Output", default_value=True, callback=self.toggle_logger_on, tag="voltage_config_toggle_logger_button")
+                dpg.add_checkbox(label="Read Voltage", default_value=self.log_voltage, callback=self.toggle_log_voltage, tag="voltage_config_toggle_log_voltage_button")
                 
                 dpg.add_separator()
                 dpg.add_spacer(height=self.window_buffer_size)
@@ -1010,9 +1002,7 @@ class GUI_Controller:
 
                 self.pyvisa_voltmeter_resources = pyvisa.ResourceManager()
                 ljm_resources_untagged = ljm.listAll(ljm.constants.dtANY, ljm.constants.dtANY)
-                #(numFound, aDeviceTypes, aConnectionTypes, aSerialNumbers, aIPAddresses)
                 ljm_resources = []
-                #print(ljm_resources_untagged)
                 num_devices, labjack_types, connection_types, serial_numbers, IP_addresses = ljm_resources_untagged
                 for connection_type in connection_types: 
                     if connection_type == 1: #USB
@@ -1025,8 +1015,7 @@ class GUI_Controller:
                         this_labjack_type = labjack_types[this_index]
                         this_serial_number = serial_numbers[this_index]
                         this_IP = IP_addresses[this_index]
-                        ljm_resources.append(f'ETHERNET::{this_serial_number}::'+int_to_ip(this_IP)+f'::T{this_labjack_type}::LJM')
-                
+                        ljm_resources.append(f'ETHERNET::{this_serial_number}::'+int_to_ip(this_IP)+f'::T{this_labjack_type}::LJM') #a little silly 
                 
                 self.voltmeter_resource_list = list(self.pyvisa_voltmeter_resources.list_resources()) + ljm_resources
                 voltmeter_resource_list = self.voltmeter_resource_list
@@ -1034,18 +1023,17 @@ class GUI_Controller:
                 dpg.add_checkbox(label="Hardware Averaging", tag="hardware", callback=self.toggle_voltage_averaging)
                 dpg.add_checkbox(label="Software Averaging", tag="software", callback=self.toggle_voltage_averaging)
                 
-
                 dpg.add_text("Voltage Channel 1 Resource ")
-                voltmeter_connection_display_1 = dpg.add_combo(voltmeter_resource_list, width=config_width-16, default_value=self.default_voltmeter_1_connection, callback=self.connect_to_voltmeter,tag="volt_com_1")
+                dpg.add_combo(voltmeter_resource_list, width=config_width-16, default_value=self.default_voltmeter_1_connection, callback=self.connect_to_voltmeter,tag="volt_com_1")
 
-                v1_channel_combo = dpg.add_combo(
+                dpg.add_combo(
                     default_value='AIN0',
                     items=('AIN0', 'AIN1', 'AIN2', 'AIN3'),
                     width=config_width-16,
                     tag="v1_channel_combo",
                     callback=self.update_T7_channel)
             
-                resolution_index_input_1 = dpg.add_combo(
+                dpg.add_combo(
                     items=('±10 volts','±1 volts','±0.1 volts','±0.01 volts'),
                     default_value='±1 volts',
                     width=config_width-16, 
@@ -1053,16 +1041,15 @@ class GUI_Controller:
                     callback=self.update_T7_voltage_range)
                 
                 dpg.add_text("Voltage Channel 2 Resource ")
-                voltmeter_connection_display_2 = dpg.add_combo(voltmeter_resource_list, width=config_width-16, default_value=self.default_voltmeter_2_connection, callback=self.connect_to_voltmeter, tag="volt_com_2")
+                dpg.add_combo(voltmeter_resource_list, width=config_width-16, default_value=self.default_voltmeter_2_connection, callback=self.connect_to_voltmeter, tag="volt_com_2")
                 
-                v2_channel_combo = dpg.add_combo(
+                dpg.add_combo(
                     default_value='AIN0',
                     items=('AIN0', 'AIN1', 'AIN2', 'AIN3'),
                     width=config_width-16, 
                     tag="v2_channel_combo",
-                    callback=self.update_T7_channel)
-                
-                resolution_index_input_2 = dpg.add_combo(
+                    callback=self.update_T7_channel)             
+                dpg.add_combo(
                     items=('±10 volts','±1 volts','±0.1 volts','±0.01 volts'),
                     default_value='±1 volts',
                     width=config_width-16, 
@@ -1072,8 +1059,16 @@ class GUI_Controller:
                 dpg.add_separator()
                 dpg.add_spacer(height=self.window_buffer_size)
 
+                dpg.add_text("Soft avg. Sample Number")
+                dpg.add_input_int(
+                    default_value=self.software_averaging_number_of_samples_per_measurement,
+                    min_value=1, 
+                    min_clamped=True, 
+                    width=config_width-16, 
+                    callback=self.update_software_averaging_number)
+                
                 dpg.add_text("T7 Resolution Index")
-                resolution_index_input = dpg.add_input_int(
+                dpg.add_input_int(
                     default_value=0,
                     min_value= 0, 
                     max_value= 8,
@@ -1085,22 +1080,22 @@ class GUI_Controller:
                 dpg.add_separator()
                 dpg.add_spacer(height=self.window_buffer_size)
 
-                enable_laser_button = dpg.add_button(label="Enable Laser", width=config_width-16, callback=self.enable_laser)
-                disable_laser_button = dpg.add_button(label="Disable Laser", width=config_width-16, callback=self.disable_laser)
+                dpg.add_button(label="Enable Laser", width=config_width-16, callback=self.enable_laser)
+                dpg.add_button(label="Disable Laser", width=config_width-16, callback=self.disable_laser)
                 dpg.add_separator()
                 dpg.add_spacer(height=self.window_buffer_size)
                 
-                check_if_on_button = dpg.add_button(label="Check Laser Status", width=config_width-16, callback=self.check_if_laser_on)
-                setup_button = dpg.add_button(label="Update Laser", width=config_width-16, callback=self.setup_laser)
+                dpg.add_button(label="Check Laser Status", width=config_width-16, callback=self.check_if_laser_on)
+                dpg.add_button(label="Update Laser LUT", width=config_width-16, callback=self.setup_laser)
                 dpg.add_separator()
                 dpg.add_spacer(height=self.window_buffer_size)
 
-                scan_button = dpg.add_button(label="Start Scan", width=config_width-16, callback=self.toggle_scan, tag="voltage_config_scan_button")
-                reset_button = dpg.add_button(label="Reset Scan", width=config_width-16, callback=self.reset_scan, tag="voltage_config_reset_scan_button")
+                dpg.add_button(label="Start Scan", width=config_width-16, callback=self.toggle_scan, tag="voltage_config_scan_button")
+                dpg.add_button(label="Reset Scan", width=config_width-16, callback=self.reset_scan, tag="voltage_config_reset_scan_button")
                 dpg.add_separator()
                 dpg.add_spacer(height=self.window_buffer_size)
                 
-                clear_voltage_plot_button = dpg.add_button(label="Clear Voltage Plot", width=config_width-16, callback=self.clear_voltage_plot)
+                dpg.add_button(label="Clear Voltage Plot", width=config_width-16, callback=self.clear_voltage_plot)
                 self.toggle_unlock_plots_button = dpg.add_button(label="Unlock Voltage Plots", width= config_width-16, callback=self.toggle_unlock_voltage_plots)
                 dpg.add_spacer(height=self.window_buffer_size)
 
@@ -1119,41 +1114,40 @@ class GUI_Controller:
                 no_move=True,
                 tag="laser_config_window") as laser_config_window:
                 
-                debug_button = dpg.add_checkbox(label="Debug Mode", default_value=self.debug, callback=self.toggle_debug)
-                logger_button = dpg.add_checkbox(label="Log Output", default_value=True, callback=self.toggle_logger_on)
-                voltage_button = dpg.add_checkbox(label="Read Voltage", default_value=self.log_voltage, callback=self.toggle_log_voltage)
-                save_tables_button = dpg.add_checkbox(label="Save LUT", default_value=self.saving_LUT, callback=self.toggle_save_LUT)
+                dpg.add_checkbox(label="Debug Mode", default_value=self.debug, callback=self.toggle_debug)
+                dpg.add_checkbox(label="Log Serial Output", default_value=True, callback=self.toggle_logger_on) #not all functionality has this check configured correctly.
+                dpg.add_checkbox(label="Read Voltage", default_value=self.log_voltage, callback=self.toggle_log_voltage)
+                dpg.add_checkbox(label="Auto Saving LUT", default_value=self.saving_LUT, callback=self.toggle_save_LUT)
                 dpg.add_separator()
                 dpg.add_spacer(height=self.window_buffer_size)
 
                 COMS_LIST = self.Laser.get_ports_list()
 
                 dpg.add_text("Serial COM Port")
-                serial_com_input = dpg.add_combo(items=COMS_LIST, width=config_width-16, default_value=self.port_name, callback=self.update_com_port)
-                connect_to_laser_button = dpg.add_button(label="Connect to Laser", width=config_width-16, callback=self.connect_to_laser)
+                dpg.add_combo(items=COMS_LIST, width=config_width-16, default_value=self.port_name, callback=self.update_com_port)
+                dpg.add_button(label="Connect to Laser", width=config_width-16, callback=self.connect_to_laser)
 
-                enable_laser_button = dpg.add_button(label="Enable Laser", width=config_width-16, callback=self.enable_laser)
-                disable_laser_button = dpg.add_button(label="Disable Laser", width=config_width-16, callback=self.disable_laser)
+                dpg.add_button(label="Enable Laser", width=config_width-16, callback=self.enable_laser)
+                dpg.add_button(label="Disable Laser", width=config_width-16, callback=self.disable_laser)
                 dpg.add_separator()
                 dpg.add_spacer(height=self.window_buffer_size)
                 
-                check_if_on_button = dpg.add_button(label="Check Laser Status", width=config_width-16, callback=self.check_if_laser_on)
-                setup_button = dpg.add_button(label="Update Laser", width=config_width-16, callback=self.setup_laser)
+                dpg.add_button(label="Check Laser Status", width=config_width-16, callback=self.check_if_laser_on)
+                dpg.add_button(label="Update Laser", width=config_width-16, callback=self.setup_laser)
                 dpg.add_separator()
                 dpg.add_spacer(height=self.window_buffer_size)
 
-                scan_button = dpg.add_button(label="Start Scan", width=config_width-16, callback=self.toggle_scan, tag="laser_config_scan_button")
-                reset_button = dpg.add_button(label="Reset Scan", width=config_width-16, callback=self.reset_scan, tag="laser_reset_scan_button")
+                dpg.add_button(label="Start Scan", width=config_width-16, callback=self.toggle_scan, tag="laser_config_scan_button")
+                dpg.add_button(label="Reset Scan", width=config_width-16, callback=self.reset_scan, tag="laser_reset_scan_button")
                 dpg.add_separator()
                 dpg.add_spacer(height=self.window_buffer_size)
 
                 #plot_button = dpg.add_button(label="Show Plot", width=config_width-16, callback=show_plot)
-                update_plot_button = dpg.add_button(label="Update Plot", width = config_width-16, callback=self.update_DAC_plot)
+                dpg.add_button(label="Update Plot", width = config_width-16, callback=self.update_DAC_plot)
                 self.toggle_unlock_plots_button = dpg.add_button(label="Unlock Plot", width=config_width-16, callback=self.toggle_unlock_DAC_plot, tag="laser_config_unlock_plot_button")
-            
 
                 dpg.add_text("Packet Delay")
-                packet_delay_input = dpg.add_input_float(
+                dpg.add_input_float(
                     default_value=self.packet_delay,
                     min_value= 0, 
                     min_clamped=True, 
@@ -1162,7 +1156,7 @@ class GUI_Controller:
                     callback=self.update_delay)
                 
                 dpg.add_text("Settle Delay")
-                packet_delay_input = dpg.add_input_float(
+                dpg.add_input_float(
                     default_value=self.settle_delay,
                     min_value= 0, 
                     min_clamped=True, 
@@ -1176,17 +1170,17 @@ class GUI_Controller:
                     case "line_fit": interpolation_default = "Line Fit"
                     case "linear_extrapolation": interpolation_default = "Linear Extrapolation"
 
-                interpolation_type_input = dpg.add_combo(
+                dpg.add_combo(
                     default_value=interpolation_default, 
                     items=("True Linear", "Line Fit", "Linear Extrapolation"),
                     width=config_width-16, 
                     callback=self.update_interpolation_type)
 
                 dpg.add_text("Interpolation Value")
-                interpolation_value_input = dpg.add_input_int(default_value=0, width=config_width-16, callback=self.update_interpolation_value)
+                dpg.add_input_int(default_value=0, width=config_width-16, callback=self.update_interpolation_value)
                 
                 dpg.add_text("Wavelength Range")
-                start_wavelength_input = dpg.add_input_float(
+                dpg.add_input_float(
                     label="Start", 
                     default_value= 1627.5, 
                     min_value=1627.5, 
@@ -1195,8 +1189,7 @@ class GUI_Controller:
                     max_clamped=True, 
                     width=config_width/1.5, 
                     callback=self.update_start_wavelength)
-                
-                end_wavelength_input = dpg.add_input_float(
+                dpg.add_input_float(
                     label="End", 
                     default_value= 1672.4955, 
                     min_value=1627.5, 
@@ -1282,7 +1275,7 @@ class GUI_Controller:
             dpg.add_tab(label="DAC View", tag="DAC View", parent="tab_bar")
             dpg.add_tab(label="Voltage Data", tag="Voltage Data", parent="tab_bar")
 
-    def start_window(self):
+    def start_window(self): # this is where the program starts!
         dpg.create_viewport(x_pos=0, y_pos=0, width=self.SCREEN_WIDTH, height=self.SCREEN_HEIGHT, title="Laser Control")
         
         def set_theme_light():
@@ -1304,15 +1297,11 @@ class GUI_Controller:
                     dpg.add_menu_item(label="Light", callback=set_theme_light)
                     dpg.add_menu_item(label="Theme Editor", callback=lambda: dpg.show_style_editor())
                 with dpg.menu(label="File"):
-                    dpg.add_menu_item(label="Open Project", callback=self.open_project_file)
-                    dpg.add_menu_item(label="Open LUT", callback=self.import_LUT)
-                    with dpg.menu(label="Save"):
-                        dpg.add_menu_item(label="Save Project As", callback=self.save_project_file) #NOTE: NOT IMPLEMENTED
-                    with dpg.menu(label="Export"):
-                        dpg.add_menu_item(label="Export Voltage Plot", callback=self.export_voltage_plot)
-                        dpg.add_menu_item(label="Export DAC Plot", callback=self.export_DAC_plot)
-                        dpg.add_menu_item(label="Export Voltage Data", callback=self.export_voltage_data)
+                    dpg.add_menu_item(label="Load Config .yaml", callback=self.load_yaml_config)
+                    dpg.add_menu_item(label="Load LUT", callback=self.import_LUT)
+                    dpg.add_menu_item(label="Export Voltage Data", callback=self.export_voltage_data)
 
+            #init themes for plotting later
             with dpg.theme(tag="plot_theme"):
                 with dpg.theme_component(dpg.mvLineSeries):
                     dpg.add_theme_style(dpg.mvPlotStyleVar_Marker, dpg.mvPlotMarker_Diamond, category=dpg.mvThemeCat_Plots)
@@ -1321,9 +1310,7 @@ class GUI_Controller:
             with dpg.theme(tag="tracker_theme"):
                 with dpg.theme_component(dpg.mvLineSeries):
                     dpg.add_theme_style(dpg.mvPlotStyleVar_LineWeight, 3, category=dpg.mvThemeCat_Plots)
-
-            
-
+            # tab management functions
             self.create_tab_bar()
             self.load_Voltage_tab()
             if dpg.does_item_exist("voltage_1_window"):
@@ -1332,9 +1319,6 @@ class GUI_Controller:
             self.load_DAC_tab()
             self.open_logger()
                     
-                        
-
-            
         dpg.setup_dearpygui()
         dpg.show_viewport()
         dpg.start_dearpygui()

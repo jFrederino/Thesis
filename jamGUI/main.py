@@ -1,7 +1,7 @@
 # JAMES USHER 2026
 
-from DBR_FP4209.jamGUI.Instatune import DBR_Spectrometer
-from DBR_FP4209.jamGUI.jamGUI import GUI_Controller
+from Instatune import DBR_Spectrometer
+from jamGUI import GUI_Controller
 
 #Laser = DBR_Spectrometer()
 #Laser.read_voltage()

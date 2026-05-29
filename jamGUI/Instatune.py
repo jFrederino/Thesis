@@ -5,7 +5,6 @@ from timeit import default_timer as timer
 import generate_table as table
 import pathlib 
 
-
 class DBR_Spectrometer:
     def __init__(self, 
         port_name:str = "COM4", 
@@ -301,7 +300,7 @@ class DBR_Spectrometer:
         #NOTE: this will delete even previously saved tables, if reusing one. 
         # It deletes what DBR is using for current scan after the scan finishes.
 
-        return DAC_list, logger_message
+        return DAC_list, logger_message, path
    
 
    
