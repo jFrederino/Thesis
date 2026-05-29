@@ -1,0 +1,8 @@
+debug: false
+end_wavelength: 1672.4955
+interpolation_type: true_linear
+packet_delay: 0.0
+scan_date: '2026-05-27 14:06:23'
+self.interpolation_value: 0
+settle_delay: 0.0
+start_wavelength: 1627.5

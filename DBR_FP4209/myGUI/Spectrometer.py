@@ -253,6 +253,7 @@ class DBR_Spectrometer:
             case 0x03: status_message = "Register is Read Only. "
             case 0x04: status_message = "Command could not be executed. "
             case 0x05: status_message = "Value out of range. "
+        
         if status != 0x01: 
             print(f"Error: status code 0x{status:X}")
             print(status_message)

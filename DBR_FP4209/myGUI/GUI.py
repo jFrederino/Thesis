@@ -16,8 +16,10 @@ import pyvisa
 from labjack import ljm
 import socket
 import struct
-
-
+from pathlib import Path
+from datetime import datetime
+import csv
+import shutil
 
 class GUI_Controller:
     def __init__(self, debug: bool = False):
@@ -61,6 +63,10 @@ class GUI_Controller:
         self.voltage_1_data: list[tuple] = []
         self.voltage_2_data: list[tuple] = []
         self.DAC_list = [[],[],[],[],[],[]]
+
+        #updated after scan completes or data is pushed via save voltage button
+        self.voltage_1_data_all: list[list[tuple]] = [] 
+        self.voltage_2_data_all: list[list[tuple]] = []
         
         # FP4029 Serial Communication parameters
         self.default_port_name = "COM4"
@@ -70,8 +76,19 @@ class GUI_Controller:
         self.default_voltmeter_1_connection = "USB0::0x2A8D::0x1601::MY60077980::INSTR"
         self.default_voltmeter_2_connection = "USB0::0x2A8D::0x1601::MY60077980::INSTR"
         self.voltage_hardware_averaging = False
+        self.software_averaging = False
         self.v1_channel = 'AIN0'
         self.v2_channel = 'AIN0'
+
+        
+        self.TIME = datetime.now()
+        self.CWD = os.path.dirname(os.path.realpath(__file__))
+        self.TEMP_DIR = self.CWD + '/temp'
+        try:
+            shutil.rmtree(self.TEMP_DIR)
+        except:
+            print('Temp does not exist')
+        Path(self.TEMP_DIR).mkdir(parents=True, exist_ok=True)
 
         dpg.create_context()
         matplotlib.use('Agg')
@@ -126,9 +143,20 @@ class GUI_Controller:
                     timeout = 1) 
                 
                 self.logger.log(f"Serial port {self.port.name} opened successfully.")
+
+                #TEST CONNECTION TO COMX to see if it is the FP4209 Instatune
                 self.setup_laser()
-            except:
-                self.logger.log_error(f"Port '{self.port_name}' could not be found.")
+
+                response, res = self.Laser.check_if_on()
+                name, status, status_message, gain_value = response
+                if status != 1: #ERROR HAS OCCURRED (Packet not understood etc.) WRONG RESPONSE
+                    self.logger.log_error(f"{response}")
+                    self.logger.log_error(f"Error in communication with Instatune at '{self.port_name}', \n Is this port connected to a FP4209 Instatune? Check NI MAX")
+                    self.logger.log_error(f"Closing Serial Port '{self.port_name}'")
+                    #self.port.close()  #Laser.read_response() already does this actually.
+
+            except: #NO RESPONSE (error in indexing response in Laser.read_response is most common error here, when connected to wrong device.)
+                self.logger.log_error(f"Device at '{self.port_name}' not responding, or could not be connected to. \n Is this port connected to a FP4209 Instatune? Check NI MAX")
                 self.log_available_ports()
         try: 
             #self.port
@@ -153,7 +181,10 @@ class GUI_Controller:
 
     def toggle_voltage_averaging(self, sender, data):
 
-        self.voltage_hardware_averaging = bool(data)
+        if sender == "hardware":
+            self.voltage_hardware_averaging = bool(data)
+        if sender == 'software':
+            self.software_averaging = bool(data)
 
         if self.voltage_hardware_averaging == 0: 
             try: 
@@ -180,10 +211,10 @@ class GUI_Controller:
 
             try:
                 # 3. Write configuration to the T7
-                ljm.eWriteNames(self.handle, 3, [f"{self.v1_channel}_EF_INDEX",f"{self.v1_channel}_EF_CONFIG_A", f"{self.v1_channel}_EF_CONFIG_D"], [3, 100, 50000.0])
+                ljm.eWriteNames(self.handle, 3, [f"{self.v1_channel}_EF_INDEX",f"{self.v1_channel}_EF_CONFIG_A", f"{self.v1_channel}_EF_CONFIG_D"], [3, 10, 100.0])
                 self.logger.log(f"{ljm.eReadNames(self.handle, 3, [f"{self.v1_channel}_EF_INDEX",f"{self.v1_channel}_EF_CONFIG_A", f"{self.v1_channel}_EF_CONFIG_D"])}")
 
-                ljm.eWriteNames(self.handle, 3, [f"{self.v2_channel}_EF_INDEX",f"{self.v2_channel}_EF_CONFIG_A", f"{self.v2_channel}_EF_CONFIG_D"], [3, 100, 50000.0])
+                ljm.eWriteNames(self.handle, 3, [f"{self.v2_channel}_EF_INDEX",f"{self.v2_channel}_EF_CONFIG_A", f"{self.v2_channel}_EF_CONFIG_D"], [3, 10, 100.0])
                 self.logger.log(f"{ljm.eReadNames(self.handle, 3, [f"{self.v2_channel}_EF_INDEX",f"{self.v2_channel}_EF_CONFIG_A", f"{self.v2_channel}_EF_CONFIG_D"])}")
 
                 self.logger.log(f"{self.v1_channel} & {self.v2_channel} EF configured successfully.")
@@ -208,7 +239,10 @@ class GUI_Controller:
                     # 4. Perform a single read of the averaged samples
                     # Reading _READ_A explicitly triggers the T7 to capture the burst and average it
                     averaged_voltage = ljm.eReadName(self.handle, f"{self.v1_channel}_EF_READ_A")
+                    _max = ljm.eReadName(self.handle, f"{self.v1_channel}_EF_READ_B")
+                    _min = ljm.eReadName(self.handle, f"{self.v1_channel}_EF_READ_C")
                     self.logger.log(f"Averaged Reading: {averaged_voltage:.5f} V")
+                    self.logger.log(f"{_max}, {_min}, {averaged_voltage}")
 
                 except ljm.LJMError as e:
                     self.logger.log_error(f"LJM Error occurred: {e}")
@@ -244,6 +278,16 @@ class GUI_Controller:
                     self.logger.log_error(f"LJM Error occurred: {e}")
 
                 return averaged_voltage
+            
+            elif self.software_averaging:
+                address = int(self.v2_channel[-1])*2
+                self.logger.log(f"{address}")
+                sample = []
+                for i in range(10): 
+                    x = ljm.eReadAddress(self.handle, address=address, dataType=ljm.constants.FLOAT32)
+                    sample.append(x)
+                return np.mean(sample)
+
             else: 
                 #print("not averaging")
                 #self.logger.log_debug("T7")
@@ -318,7 +362,13 @@ class GUI_Controller:
         return duplicates
     
     def _scan(self):
-        self.logger.log("Starting Scan")
+        #self.logger.log("Starting Scan")
+
+        try:
+            self.Laser._laser_serial
+        except:
+            self.logger.log_error(f"No Serial Connection to Laser set up.")
+            self.reset_scan()
 
         start = time.perf_counter()
         packets = self.Laser.make_packets_list(self.DAC_list)
@@ -333,6 +383,11 @@ class GUI_Controller:
         #create New Voltage series for plot
         self.add_voltage_1_series()
         self.add_voltage_2_series()
+
+        if self._num_voltage_1_series == self._num_voltage_2_series: 
+            self.save_yaml_config(self.TEMP_DIR, series_index=self._num_voltage_1_series) #these will be grabbed and used when exporting voltage data
+        else:
+            self.logger.log_error("Cannot Save YAML config with current voltage data series index mismatch. MYBAD")
 
         self.voltage_1_data: list[tuple] = []
         self.voltage_2_data: list[tuple] = []
@@ -420,6 +475,11 @@ class GUI_Controller:
         
         if self.debug: self.logger.log_debug(f'Duplicate Packets:\n' + f'{self.get_duplicates(sent_list)}')
         if self.logger_on: self.logger.log(f"Scan Complete!")
+
+        self.store_voltage_data(self.voltage_1_data, self.voltage_2_data)
+        
+
+        if self.logger_on: self.logger.log(f"Saved Voltage Data")
         end = time.perf_counter()
 
         self.logger.log_debug(f"full scan time: {end - start:.6f} seconds")
@@ -428,6 +488,9 @@ class GUI_Controller:
         self.logger.log_debug(f"avg voltage recording time: {np.mean(voltage_time_list):.6f} seconds")
         self.logger.log_debug(f"std: {np.std(voltage_time_list):.6f} seconds")
 
+    def store_voltage_data(self, v1_data: list[tuple], v2_data: list[tuple]):
+        self.voltage_1_data_all.append(v1_data)
+        self.voltage_2_data_all.append(v2_data)
 
     def import_LUT(self):
         def update_DAC_table(path):
@@ -453,6 +516,7 @@ class GUI_Controller:
         self.packet_delay = data
         #if sender != "delay_slider":
         if self.logger_on: self.logger.log(f"Packet Delay: {self.packet_delay}")
+
     def update_settle_delay(self, sender, data):
         self.settle_delay = data
         #if sender != "delay_slider":
@@ -575,7 +639,6 @@ class GUI_Controller:
         self.Laser.set_default_serial_port(self.port_name)
         self.logger.log(f"Will Connect to Port: {self.port_name}")
 
-
     def load_project_file(path): #NOTE: NOT IMPLEMENTED
         pass
 
@@ -619,7 +682,6 @@ class GUI_Controller:
 
         dpg.focus_item("logger_window")
 
-
     def toggle_unlock_DAC_plot(self):
         if not self.DAC_plot_unlocked:
             self.DAC_plot_unlocked = True
@@ -649,7 +711,6 @@ class GUI_Controller:
 
             if self.logger_on: self.logger.log("Voltage Plot View Locked")
             dpg.set_item_label("voltage_config_unlock_plot_button", "Unlock Plots")
-
 
     def toggle_save_LUT(self, sender, data):
         self.saving_LUT = bool(data)
@@ -719,7 +780,6 @@ class GUI_Controller:
         dpg.delete_item("V_1_yaxis", children_only=True)
         dpg.delete_item("V_2_yaxis", children_only=True)
 
-
     def open_file_browser(self, choose_dir: bool, callback_function: FunctionType):
 
         def close_browser(sender, data, cancel_pressed):
@@ -732,21 +792,18 @@ class GUI_Controller:
                     callback_function(path)
             new_func()
 
-        CWD = os.path.dirname(os.path.realpath(__file__))
-
         if dpg.does_alias_exist("browser_window"): dpg.delete_item("browser_window")
         with dpg.window(label="Open Project File", tag="browser_window"):
             dpge.add_file_browser(
                 parent="browser_window",
                 show_as_window=False,
-                default_path=CWD,
+                default_path=self.CWD,
                 collapse_sequences=True,
                 allow_multi_selection=False,
                 show_ok_cancel = True, 
                 dirs_only = choose_dir,
                 callback= close_browser
             )
-
 
     def export_voltage_plot(self):
         def create_voltage_plots(path):
@@ -769,30 +826,95 @@ class GUI_Controller:
     def export_voltage_data(self):
         self.open_file_browser(choose_dir=True, callback_function=self.write_voltage_data)
 
-    def write_voltage_data(self, path):
-        import csv
-        CWD = os.path.dirname(os.path.realpath(__file__))
-        if self.interpolation_type == "true_linear":
-            new_table_path = path + f'/True_Linear_({self.interpolation_value}, {self.start_wl}, {self.end_wl}).csv'
+    def save_yaml_config(self, given_path, series_index = -1):
+        '''
+        Saves current scan configuration (Laser config settings, etc. as yaml file)
+        '''
+        import yaml
+        # Data to be written to the YAML file
+        data = {
+            'scan_date': self.TIME.strftime("%Y-%m-%d %H:%M:%S"), #is calculated at startup of GUI, so within the same session it will not change
+            'debug': self.debug,
+            'packet_delay': self.packet_delay,
+            'settle_delay': self.settle_delay,
+            'start_wavelength': self.start_wl,
+            'end_wavelength': self.end_wl,
+            'interpolation_type': self.interpolation_type,
+            'self.interpolation_value': self.interpolation_value
+        }
 
-        if self.interpolation_type == "linear_extrapolation":
-            new_table_path = path + f'/Linear_Extrapolation_({self.interpolation_value}, {self.start_wl}, {self.end_wl}).csv'
+        # Writing the data to a YAML file
+        with open(f'{given_path}/scan_config_{series_index}.yaml', 'w') as file:
+            yaml.dump(data, file)
 
-        if self.interpolation_type == "line_fit":
-            new_table_path = path + f'/Line_Fit_({self.interpolation_value}, {self.start_wl}, {self.end_wl}).csv'
+    def write_voltage_data(self, given_path, series_list: list|str = 'ALL'):
+        '''
+        Saves chosen voltage series to given path location, along with current config settings as yaml file.
+        '''
 
-        with open(new_table_path, 'w', newline='') as csvfile:
-            writer = csv.writer(csvfile, delimiter=',', quotechar='|')
-            writer.writerow(['IDX','Voltage','Target Wl'])
-            idx = 0
-            for pair in self.voltage_1_data:  
-                target_wl, voltage = pair
-                writer.writerow([idx, voltage, target_wl])
-                idx += 1
+        # Create directories
+        '''
+        Chosen_Directory/
+        └── 2026-05-27_10'45''20/ 
+            ├── Scan_1
+            │   ├── voltage_data.csv 
+            │   └── scan_config.yaml
+            └── Scan_2
+                ├── voltage_data.csv 
+                └── scan_config.yaml
+            .
+            .
+            .
+        '''
+        session_path = f"{given_path}/{self.TIME.strftime("%Y-%m-%d_%H'%M''%S")}"
+        Path(session_path).mkdir(parents=True, exist_ok=True)
+        #Save Scan Config yaml file
+        
+        all_data = list(zip(self.voltage_1_data_all, self.voltage_2_data_all))
+        
+        #only export data for which there is a yaml file.
+        if series_list == 'ALL':
+            files = [f.name for f in Path(self.TEMP_DIR).iterdir() if f.is_file()]
+            file_numbers = []
+            for file in files:
+                file_numbers.append(int(file.split('_')[2][0])) #[1, 2, 3 ...] skipped
+            series_list = file_numbers
+            print(series_list)
+        else: 
+            if not isinstance(series_list, list): 
+                self.logger.log_error("Chosen saved voltage series list is malformed")
 
-        csvfile.close()
-        if self.logger_on: self.logger.log(f"Voltage Data Saved in: {path}")
+        for i in series_list:
+            series_path = session_path + f'/scan_{i}' 
+            print(series_path)
+            Path(series_path).mkdir(parents=True, exist_ok=True)
+            try: 
+                shutil.move(self.TEMP_DIR + f'/scan_config_{i}.yaml', series_path + f'/scan_config.yaml')
+            except: 
+                self.logger.log_error(f"Error moving yaml config from temp to export directory; does it exist?")
+            try:
+                v1_data, v2_data = all_data[i-1]
+            except:
+                self.logger.log(f"No data for scan yaml: scan_config_{i}; did scan complete?")
+                continue
 
+            if len(v1_data) != len(v2_data):
+                self.logger.log_error(f"V1 data and V2 data are different sizes: {len(v1_data)} != {len(v2_data)}")
+                return
+            
+            with open(series_path + '/voltage_data.csv', 'w', newline='') as csvfile:
+                writer = csv.writer(csvfile, delimiter=',', quotechar='|')
+                writer.writerow(['IDX','Voltage 1','Voltage 2','Target Wl'])
+                
+                for j in range(len(v1_data)): 
+                    target_wl, voltage_1 = v1_data[j]
+                    target_wl, voltage_2 = v2_data[j]
+                    writer.writerow([j, voltage_1, voltage_2, target_wl])
+
+            csvfile.close()
+
+        if self.logger_on: self.logger.log(f"Voltage Data Saved in: {given_path}")
+        
     def toggle_scan(self):
         if not self.scan_running:
             self.scan_running = True
@@ -909,7 +1031,9 @@ class GUI_Controller:
                 self.voltmeter_resource_list = list(self.pyvisa_voltmeter_resources.list_resources()) + ljm_resources
                 voltmeter_resource_list = self.voltmeter_resource_list
 
-                dpg.add_checkbox(label="Hardware Averaging", callback=self.toggle_voltage_averaging)
+                dpg.add_checkbox(label="Hardware Averaging", tag="hardware", callback=self.toggle_voltage_averaging)
+                dpg.add_checkbox(label="Software Averaging", tag="software", callback=self.toggle_voltage_averaging)
+                
 
                 dpg.add_text("Voltage Channel 1 Resource ")
                 voltmeter_connection_display_1 = dpg.add_combo(voltmeter_resource_list, width=config_width-16, default_value=self.default_voltmeter_1_connection, callback=self.connect_to_voltmeter,tag="volt_com_1")
@@ -958,8 +1082,6 @@ class GUI_Controller:
                     width=config_width-16, 
                     callback=self.update_resolution_index)
                 
-                
-                
                 dpg.add_separator()
                 dpg.add_spacer(height=self.window_buffer_size)
 
@@ -1006,9 +1128,10 @@ class GUI_Controller:
 
                 COMS_LIST = self.Laser.get_ports_list()
 
-                connect_to_laser_button = dpg.add_button(label="Connect to Laser", width=config_width-16, callback=self.connect_to_laser)
                 dpg.add_text("Serial COM Port")
                 serial_com_input = dpg.add_combo(items=COMS_LIST, width=config_width-16, default_value=self.port_name, callback=self.update_com_port)
+                connect_to_laser_button = dpg.add_button(label="Connect to Laser", width=config_width-16, callback=self.connect_to_laser)
+
                 enable_laser_button = dpg.add_button(label="Enable Laser", width=config_width-16, callback=self.enable_laser)
                 disable_laser_button = dpg.add_button(label="Disable Laser", width=config_width-16, callback=self.disable_laser)
                 dpg.add_separator()
@@ -1103,7 +1226,6 @@ class GUI_Controller:
                     self.update_DAC_plot()
         else: dpg.show_item("DAC_window")
         
-
     def load_Voltage_tab(self):
         self.voltage_config()
         plot_width = self.SCREEN_WIDTH-240
@@ -1134,8 +1256,7 @@ class GUI_Controller:
         else: 
             dpg.show_item("voltage_1_window")
             dpg.show_item("voltage_2_window")
-
-            
+      
     def tab_callback(self, sender, data):
         def clear_primary_window():
 
